@@ -32,13 +32,13 @@ nWGL.getTextFromFile = function(filepath){
 /**
  * Shader Parser
  * @param {string} - filepath
+ * @param {function} - callback function for a custom parser
  */
-nWGL.parseShader = function(filepath){
+nWGL.parseShader = function(filepath, callback){
   let string = nWGL.getTextFromFile(filepath);
-  
-  //your code goes here if you want to make a custom parser
-  
-  return string;
+
+  if(callback) return callback(string);
+  else return string;
 };
 
 //-----------------------------------------------------------------------
@@ -614,6 +614,9 @@ nWGL.main = class{
     gl.getExtension('EXT_color_buffer_float');
     gl.getExtension('OES_texture_float_linear');
     
+    /** @member {number} */
+    this.loadTime = performance.now();
+
     /** @member {object} */
     this.textures = {};
     /** @member {object} */
@@ -784,7 +787,7 @@ nWGL.main = class{
     this.drawCalls++;
     
     if(this.activeProgram.uniforms["u_time"]){
-      this.activeProgram.setUniform("u_time", performance.now());
+      this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
     }
     
     if(this.activeProgram.uniforms["u_mouse"]){
