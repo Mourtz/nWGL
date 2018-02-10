@@ -211,14 +211,12 @@ nWGL.texture = class {
     let gl = this.nWGL.gl;
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.TEXTURE_WRAP_S);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.TEXTURE_WRAP_T);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.TEXTURE_MIN_FILTER);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.TEXTURE_MAG_FILTER);
-
 
     gl.texImage2D(gl.TEXTURE_2D,
       0,
@@ -272,7 +270,7 @@ nWGL.texture = class {
     return this.texture;
   }
 
-  // texture pixel data setter
+  // texture's pixel data setter
   set tex_data(opts) {
     let gl = this.nWGL.gl;
 
