@@ -263,16 +263,92 @@ nWGL.texture = class {
     this.texture = tex.texture;
     tex.texture = temp;
   }
-  
+
   delete(){
     this.nWGL.gl.deleteTexture(this.texture);
   }
-  
+
   // texture getter
   get tex(){ return this.texture; }
+
+  // texture pixel data setter
+  set tex_data(opts){
+    let gl = this.nWGL.gl;
+
+    if(opts.bind) gl.bindTexture(gl.TEXTURE_2D, this.texture);
+
+    gl.texImage2D(gl.TEXTURE_2D,
+      0,
+      this.internalformat,
+      this.width,
+      this.height,
+      0,
+      this.format,
+      this.type,
+      opts.data || this.image
+     );
+  }
+
   // image getter
   get img(){ return this.image; }
-  
+
+};
+
+/**
+ * nWGL cubemap wrapper
+ */
+nWGL.cubemap = class {
+  /**
+   * @param {nWGL.main} nWGL - nWGL reference
+   * @param {object} opts - cubemaps's options
+   * @param {string[]} opts.images_url - each cubemap's image filepath
+   */
+  constructor(nWGL, opts){
+    opts = opts || {};
+
+    /** @member {nWGL} */
+    this.nWGL = nWGL;
+    /** @member {HTMLImageElement | HTMLVideoElement} */
+    this.images = [];
+    /** @member {WebGLTexture} */
+    this.texture = null;
+
+    let gl = nWGL.gl;
+
+    if(!Array.isArray(opts.images_url) || opts.images_url.length != 6){
+      throw "You must pass 6 images to create a cubemap!";
+    }
+
+    let sandbox = this;
+    {
+      let texture = gl.createTexture();
+
+      const targets = [gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+                       gl.TEXTURE_CUBE_MAP_POSITIVE_X, gl.TEXTURE_CUBE_MAP_POSITIVE_Y, gl.TEXTURE_CUBE_MAP_POSITIVE_Z];
+
+      for (let i = 0; i < 6; ++i) {
+        let image = new Image();
+
+        image.onload = function () {
+          sandbox.images.push(image);
+
+          gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          gl.texImage2D(targets[i], 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+          if (i === 5) {
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            sandbox.texture = texture;
+            console.log("laoded Cubemap!");
+          }
+        };
+
+        image.src = opts.images_url[i];
+      }
+    }
+  }
+
+  get tex(){ return this.texture; }
 };
 
 //-----------------------------------------------------------------------
@@ -362,9 +438,10 @@ nWGL.program = class {
       return true;
     }
 
+    console.warn("Couldn't find '" + name + "' uniform!");
     return false;
   }
-  
+
   /**
    * Sets a value to the uniform with the name you have given
    * @param {string} name - uniform's name
@@ -382,11 +459,11 @@ nWGL.program = class {
    * @param {string} name - texture's name
    * @param {WebGLTexture} tex - texture
    */
-  setTexture(pos, name, tex){
+  setTexture(pos, name, tex, target){
     let gl = this.nWGL.gl;
-    
+
     gl.activeTexture(gl.TEXTURE0 + pos);
-    gl.bindTexture(gl.TEXTURE_2D, tex); 
+    gl.bindTexture(target, tex);
     if(!this.textures[name] || this.textures[name] != pos){
       this.textures[name]=pos;
     }
@@ -620,6 +697,8 @@ nWGL.main = class{
     /** @member {object} */
     this.textures = {};
     /** @member {object} */
+    this.cubemap_textures = {};
+    /** @member {object} */
     this.shaders = {};
     /** @member {object} */
     this.programs = {};
@@ -661,7 +740,14 @@ nWGL.main = class{
     
     return tex;
   }
-  
+
+  addCubemap(opts, name){
+    let tex = new nWGL.cubemap(this, opts);
+    this.cubemap_textures[name] = tex;
+
+    return tex;
+  }
+
   /**
    * Adds a buffer
    * @param {object} [opts] - buffer's options
@@ -680,10 +766,13 @@ nWGL.main = class{
    * @param {string} name - texture's name
    * @param {WebGLTexture} [tex=this.textures[name].texture || null] - texture
    */
-  setTexture(pos, name, tex){
-    this.activeProgram.setTexture(pos, name, tex || this.textures[name].texture || null);
+  setTexture(pos, name, tex, target){
+    this.activeProgram.setTexture(pos, name,
+      tex || (this.textures[name] && this.textures[name].texture) || null,
+      target || this.gl.TEXTURE_2D
+    );
   }
-  
+
   /**
    * Adds a shader
    * @param {string} filepath - shader's filepath
