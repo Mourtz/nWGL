@@ -747,7 +747,7 @@ nWGL.main = class {
     /** @member {nWGL.program} */
     this.activeProgram = null;
     /** @member {number} */
-    this.drawCalls = 0;
+    this.frame = 0;
 
     // vbo
     this.addBuffer({
@@ -852,8 +852,8 @@ nWGL.main = class {
       program.setUniform("u_mouse", this.mouse.x, this.mouse.y);
     }
 
-    if (program.addUniform("u_drawCalls", "1ui")) {
-      program.setUniform("u_drawCalls", 0);
+    if (program.addUniform("u_frame", "1ui")) {
+      program.setUniform("u_frame", 0);
     }
 
     return program;
@@ -913,7 +913,7 @@ nWGL.main = class {
    */
   draw(mode) {
     let gl = this.gl;
-    this.drawCalls++;
+    ++this.frame;
 
     if (this.activeProgram.uniforms["u_time"]) {
       this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
@@ -923,8 +923,8 @@ nWGL.main = class {
       this.setMouse();
     }
 
-    if (this.activeProgram.uniforms["u_drawCalls"]) {
-      this.activeProgram.setUniform("u_drawCalls", this.drawCalls);
+    if (this.activeProgram.uniforms["u_frame"]) {
+      this.activeProgram.setUniform("u_frame", this.frame);
     }
 
     gl.drawArrays(mode || this.gl.TRIANGLES, 0, 6);
