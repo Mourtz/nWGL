@@ -43,16 +43,16 @@
     //------------------------- Render Loop -------------------------
     let frame = 1;
     (function render() {
-      sandbox.setProgram("raytracing")
-            
+      sandbox.program = "raytracing";
+
       sandbox.setTexture(0, "u_backbuffer", sandbox.textures["tex0"].tex);
       
       sandbox.gl.bindFramebuffer(sandbox.gl.FRAMEBUFFER, fb.fb);
       fb.setTexture(0, fb.t0);
       sandbox.draw();
 
-      sandbox.setProgram("display")
-      
+      sandbox.program = "display";
+
       sandbox.programs["display"].setUniform("u_cont", 1.0 / frame);
       sandbox.setTexture(1, "u_tex", fb.t0);
       

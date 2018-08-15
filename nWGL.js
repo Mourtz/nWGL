@@ -452,7 +452,8 @@ nWGL.program = class {
   setUniform(name, ...data) {
     let gl = this.nWGL.gl;
 
-    gl["uniform" + this.uniforms[name]](this.uniformsLocation[name], data);
+    if(this.uniformsLocation[name])
+      gl["uniform" + this.uniforms[name]](this.uniformsLocation[name], data);
   }
 
   /**
@@ -693,6 +694,8 @@ nWGL.framebuffer = class {
 //-------------------------------- MAIN ---------------------------------
 //-----------------------------------------------------------------------
 
+let __T_CLONES__ = 0;
+
 /**
  * nWGL
  */
@@ -767,6 +770,8 @@ nWGL.main = class {
       this.mouse.x = e.clientX || e.pageX;
       this.mouse.y = e.clientY || e.pageY;
     }, false);
+
+    console.log("Initialized sandbox No."+ (++__T_CLONES__));
   }
 
   /**
@@ -775,6 +780,8 @@ nWGL.main = class {
    * @param {string} name - texture's name
    */
   addTexture(opts, name) {
+    console.log("⮚ %cAdding (" + name + ") texture.....", "color:#85e600");
+
     let tex = new nWGL.texture(this, opts);
     this.textures[name] = tex;
 
@@ -820,6 +827,8 @@ nWGL.main = class {
    * @param {string} name - shader's name?
    */
   addShader(filepath, isVert, name) {
+    console.log("⮚ %cAdding (" + name + ") shader.....", "color:#00e6e6");
+
     let shader = new nWGL.shader(this.gl, {
       "isVert": isVert,
       "string": nWGL.parseShader(filepath)
@@ -838,7 +847,9 @@ nWGL.main = class {
     let program = new nWGL.program(this, shaders);
     this.programs[name] = program;
 
-    this.setProgram(name);
+    this.program = name;
+
+    console.log("⮚ %cAdding (" + name + ") program.....", "color:#00e600");
 
     if (program.addUniform("u_resolution", "2f")) {
       program.setUniform("u_resolution", this.canvas.width, this.canvas.height);
@@ -860,17 +871,6 @@ nWGL.main = class {
   }
 
   /**
-   * Sets a program as active
-   * @param {string} name - program's name
-   */
-  setProgram(name) {
-    let gl = this.gl;
-
-    this.activeProgram = sandbox.programs[name];
-    gl.useProgram(this.activeProgram.program);
-  }
-
-  /**
    * Release active program
    */
   releaseProgram() {
@@ -886,6 +886,8 @@ nWGL.main = class {
    * @param {string} name - framebuffer's name
    */
   addFrameBuffer(opts, name) {
+    console.log("⮚ %cAdding (" + name + ") framebuffer.....", "color:#661aff");
+
     let framebuffer = new nWGL.framebuffer(this, opts);
     this.framebuffers[name] = framebuffer;
 
@@ -928,5 +930,15 @@ nWGL.main = class {
     }
 
     gl.drawArrays(mode || this.gl.TRIANGLES, 0, 6);
+  }
+
+  get program() { return this.activeProgram; }
+
+  set program(prog) {
+    if(typeof prog === "string") prog = this.programs[prog]
+    else return console.error("there's something with the given params!");
+
+    this.activeProgram = prog;
+    this.gl.useProgram(this.activeProgram.program);
   }
 };
