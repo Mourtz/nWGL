@@ -584,9 +584,15 @@ nWGL.framebuffer = class {
     let framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer);
 
+    opts.internalformat = opts.internalformat || "RGBA32F";
+
     let drawBuffers = [];
     for (let i = 0; i < this.totalBuffers; ++i) {
-      this.textures[i] = new nWGL.texture(this.nWGL, opts);
+      if(Array.isArray(opts.internalformat)){
+        this.textures[i] = new nWGL.texture(this.nWGL, {"internalformat": opts.internalformat[Math.min(i, opts.internalformat.length - 1)]} );
+      } else {
+        this.textures[i] = new nWGL.texture(this.nWGL, opts);
+      }
 
       drawBuffers[i] = gl.COLOR_ATTACHMENT0 + i;
       gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, drawBuffers[i], gl.TEXTURE_2D, this.textures[i].texture, 0);
