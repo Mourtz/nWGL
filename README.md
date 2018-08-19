@@ -64,7 +64,7 @@ let frame = 1;
 })();
 ```
 [Raymarching Primitives](https://mourtz.github.io/nWGL-examples/raymarching_primitives/raymarching_primitives.html)
-([code](https://github.com/Mourtz/nWGL-examples/blob/master/raymarching_primitives/raymarching_primitives.html))
+([code](https://github.com/Mourtz/nWGL-examples/tree/master/raymarching_primitives))
 ```js
 const WIDTH = window.innerHeight/1.25, HEIGHT = window.innerHeight/1.25;
 let sandbox = new nWGL.main({ "width": WIDTH, "height": HEIGHT });
