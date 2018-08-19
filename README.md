@@ -3,8 +3,8 @@
 Simple WebGL2 boilerplate. It's supposed to save me some time every time I start a new project.
 
 ## Demos
-[smallpt](https://mourtz.github.io/nWGL/examples/smallpt/smallpt.html) 
-([code](https://github.com/Mourtz/nWGL/blob/master/examples/smallpt/smallpt.html))
+[smallpt](https://mourtz.github.io/nWGL-examples/smallpt/smallpt.html) 
+([code](https://github.com/Mourtz/nWGL-examples/tree/master/smallpt))
 
 ```js
 const WIDTH = window.innerHeight/1.25, HEIGHT = window.innerHeight/1.25;
@@ -63,8 +63,8 @@ let frame = 1;
   window.requestAnimationFrame(render);
 })();
 ```
-[Raymarching Primitives](https://mourtz.github.io/nWGL/examples/raymarching_primitives/raymarching_primitives.html)
-([code](https://github.com/Mourtz/nWGL/blob/master/examples/raymarching_primitives/raymarching_primitives.html))
+[Raymarching Primitives](https://mourtz.github.io/nWGL-examples/raymarching_primitives/raymarching_primitives.html)
+([code](https://github.com/Mourtz/nWGL-examples/blob/master/raymarching_primitives/raymarching_primitives.html))
 ```js
 const WIDTH = window.innerHeight/1.25, HEIGHT = window.innerHeight/1.25;
 let sandbox = new nWGL.main({ "width": WIDTH, "height": HEIGHT });
