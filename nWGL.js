@@ -522,7 +522,7 @@ nWGL.program = class {
   }
 
   /**
-   * Reorganizes textures as they are suppose to be based on the "textureIndex" array 
+   * Reorganizes textures using the "textureIndex" array 
    * @param {object} textures
    */
   refitTextures(textures){
@@ -988,7 +988,7 @@ nWGL.main = class {
 
   /**
    * Render function
-   * @param {GLenum} [mode] - render mode
+   * @param {GLenum} [mode=gl.TRIANGLES] - render mode
    */
   draw(mode) {
     let gl = this.gl;
@@ -1006,7 +1006,7 @@ nWGL.main = class {
       this.activeProgram.setUniform("u_frame", this.frame);
     }
 
-    gl.drawArrays(mode || this.gl.TRIANGLES, 0, 6);
+    gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
   }
 
   get program() { return this.activeProgram; }
