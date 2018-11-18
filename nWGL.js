@@ -465,8 +465,9 @@ nWGL.program = class {
    * Adds a uniform to the program
    * @param {string} name - uniform's name
    * @param {object} uniform - uniform's data type
+   * @param {float[]} [data] - data to pass to the uniform
    */
-  addUniform(name, uniform) {
+  addUniform(name, uniform, ...data) {
     let gl = this.nWGL.gl;
     let uniformLocation = gl.getUniformLocation(this.program, name);
 
@@ -477,6 +478,8 @@ nWGL.program = class {
 
       this.uniforms[name] = uniform;
       this.uniformsLocation[name] = uniformLocation;
+
+      if(data.length > 0) this.setUniform(name, data);
       return true;
     }
 
@@ -796,6 +799,8 @@ nWGL.main = class {
     this.buffers = {};
     /** @member {object} */
     this.framebuffers = {};
+    /** @member {string[]} */
+    this.fbo_names = [];
     /** @member {nWGL.program} */
     this.activeProgram = null;
     /** @member {number} */
@@ -923,10 +928,8 @@ nWGL.main = class {
    * Release active program
    */
   releaseProgram() {
-    let gl = this.gl;
-
     this.activeProgram = null;
-    gl.useProgram(this.activeProgram);
+    this.gl.useProgram(this.activeProgram);
   }
 
   /**
@@ -936,11 +939,26 @@ nWGL.main = class {
    */
   addFrameBuffer(opts, name) {
     console.log("⮚ %cAdding (" + name + ") framebuffer.....", "color:#661aff");
+    
+    this.framebuffers[name] = new nWGL.framebuffer(this, opts);
+    this.fbo_names.push(name);
 
-    let framebuffer = new nWGL.framebuffer(this, opts);
-    this.framebuffers[name] = framebuffer;
+    return this.framebuffers[name];
+  }
 
-    return framebuffer;
+  /**
+   * Get framebuffer
+   * @param {number | string} index - framebuffer's index
+   */
+  getFrameBuffer(index){
+    switch(typeof index){
+      case "number":
+        return this.framebuffers[this.fbo_names[index]] || null;
+      case "string":
+        return this.framebuffers[index] || null;
+      default:
+        return null;
+    }
   }
 
   /**
