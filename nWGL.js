@@ -32,7 +32,7 @@ nWGL.getTextFromFile = function (filepath) {
 /**
  * Shader Parser
  * @param {string} - filepath
- * @param {function} - callback function for a custom parser
+ * @param {function} [callback] - callback function for a custom parser
  */
 nWGL.parseShader = function (filepath, callback) {
   let string = nWGL.getTextFromFile(filepath);
@@ -202,7 +202,7 @@ nWGL.texture = class {
 
   /** 
    * Creates a GL texture.
-   * @param {object} [data=this.image] - data to put inside the GL texture
+   * @param {HTMLImageElement | HTMLVideoElement} [data=this.image] - data to put inside the GL texture
    */
   createTexture(data) {
     let gl = this.nWGL.gl;
@@ -372,7 +372,7 @@ nWGL.shader = class {
   /**
    * @param {WebGL2RenderingContext} gl - WebGL context
    * @param {object} opts - shader's options
-   * @param {boolean} opts.isVert - Is a vertex shader?
+   * @param {boolean} [opts.isVert=false] - Is a vertex shader?
    * @param {string} opts.string - shader's source code.
    */
   constructor(gl, opts) {
@@ -390,7 +390,7 @@ nWGL.shader = class {
 
   /**
    * Compiles the shader
-   * @param {string} source - the new source of the shader
+   * @param {string} [source=this.source] - the new source of the shader
    */
   compile(source){
     let gl = this.gl;
@@ -433,8 +433,8 @@ nWGL.program = class {
     this.uniforms = {};
     /** @member {object} */
     this.uniformsLocation = {};
-    /** @member {object} */
-    this.textures = {};
+    /** @member {number[]} - texture index array */
+    this.textureIndex = {};
 
     this.initProgram();
   }
@@ -503,30 +503,34 @@ nWGL.program = class {
 
   /**
    * Sets/Adds a texture at a given position in the program
-   * @param {number} pos - texture's position
    * @param {string} name - texture's name
    * @param {WebGLTexture} tex - texture
-   * @param {GLenum} target - binding point(target)
+   * @param {number} [pos] - texture's position
+   * @param {GLenum} [target=gl.TEXTURE_2D] - binding point(target)
    */
-  setTexture(pos, name, tex, target) {
-    let gl = this.nWGL.gl;
+  setTexture(name, tex, pos, target) {
+    if(!tex || !name) return;
 
+    pos = pos || this.textureIndex[name] || 0; 
+
+    let gl = this.nWGL.gl;
     gl.activeTexture(gl.TEXTURE0 + pos);
-    gl.bindTexture(target, tex);
-    if (!this.textures[name] || this.textures[name] != pos) {
-      this.textures[name] = pos;
+    gl.bindTexture(gl[target || "TEXTURE_2D"], tex);
+    if (!this.textureIndex[name] || this.textureIndex[name] != pos) {
+      this.textureIndex[name] = pos;
     }
   }
 
   /**
-   * Deletes a texture based on a give name
-   * @param {name} name - texture's name
+   * Reorganizes textures as they are suppose to be based on the "textureIndex" array 
+   * @param {object} textures
    */
-  deleteTex(name) {
-    this.textures[name].delete();
-    delete this.textures[name];
+  refitTextures(textures){
+    let names = Object.keys(this.textureIndex);
+    for (let name in names) {
+      this.setTexture(name, textures[name].tex);
+    }
   }
-
 };
 
 //-----------------------------------------------------------------------
@@ -863,14 +867,20 @@ nWGL.main = class {
 
   /**
    * Sets/Adds a texture at a given position in the program
-   * @param {number} pos - texture's position
    * @param {string} name - texture's name
-   * @param {WebGLTexture} [tex=this.textures[name].texture || null] - texture
+   * @param {WebGLTexture} [tex=this.textures[name].texture] - texture
+   * @param {number} [pos] - texture's position
+   * @param {target} [target=gl.TEXTURE_2D] - binding point
    */
-  setTexture(pos, name, tex, target) {
-    this.activeProgram.setTexture(pos, name,
-      tex || (this.textures[name] && this.textures[name].texture) || null,
-      target || this.gl.TEXTURE_2D
+  setTexture(name, tex, pos, target) {
+    if(typeof name !== "string") return console.error("not correct name!");
+    if(!(tex || this.textures[name])) return console.error("not correct texture!");
+    
+    this.activeProgram.setTexture(
+      name,
+      tex || this.textures[name].texture,
+      pos, 
+      target
     );
   }
 
