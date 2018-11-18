@@ -36,9 +36,7 @@ nWGL.getTextFromFile = function (filepath) {
  */
 nWGL.parseShader = function (filepath, callback) {
   let string = nWGL.getTextFromFile(filepath);
-
-  if (callback) return callback(string);
-  else return string;
+  return (callback) ? callback(string) : string;
 };
 
 //-----------------------------------------------------------------------
@@ -84,8 +82,7 @@ nWGL.texture = class {
     this.TEXTURE_MIN_FILTER = gl.LINEAR;
 
     /** @member {GLenum} - texture's internal format */
-    this.internalformat = gl.RGBA;
-    if (opts.internalformat) this.internalformat = gl[opts.internalformat];
+    this.internalformat = gl[opts.internalformat || "RGBA"];
 
     /** @member {GLenum} - texture's format */
     this.format = gl.RGBA;
@@ -253,14 +250,26 @@ nWGL.texture = class {
 
   /** 
    * Swaps the GL_texture of two nWGL.texture objects
-   * @param {nWGL.texture} tex
+   * @param {nWGL.texture | WebGLTexture} tex
    */
   swap(tex) {
-    let temp = this.texture;
-    this.texture = tex.texture;
-    tex.texture = temp;
+    if(tex instanceof nWGL.texture){
+      let temp = {};
+      Object.assign(temp, this);
+      Object.assign(this, tex);
+      Object.assign(tex, temp);
+    } else if(this.nWGL.gl.isTexture(tex)) {
+      let temp = this.texture;
+      this.texture = tex;
+      tex = temp;
+    } else {
+      throw "cant do anything with what you gave me!";
+    }
   }
 
+  /**
+   * Deletes WebGLTexture
+   */
   delete() {
     this.nWGL.gl.deleteTexture(this.texture);
   }
@@ -320,7 +329,8 @@ nWGL.cubemap = class {
       throw "You must pass 6 images to create a cubemap!";
     }
 
-    let sandbox = this; {
+    let sandbox = this; 
+    {
       let texture = gl.createTexture();
 
       const targets = [gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
@@ -366,20 +376,41 @@ nWGL.shader = class {
    * @param {string} opts.string - shader's source code.
    */
   constructor(gl, opts) {
+    /** @member {WebGL2RenderingContext} */
     this.gl = gl;
+    /** @member {boolean} */
+    this.isVertexShader = (typeof opts.isVert === "boolean") ? opts.isVert : false;
+    /** @member {string} */
+    this.source = (typeof opts.string === "string") ? opts.string : null;
+    /** @member {WebGLShader} */
+    this.shader = null;
 
-    let shader = gl.createShader(opts.isVert ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER);
-    gl.shaderSource(shader, opts.string);
+    this.compile();
+  }
+
+  /**
+   * Compiles the shader
+   * @param {string} source - the new source of the shader
+   */
+  compile(source){
+    let gl = this.gl;
+
+    // mark previous shader for deletion
+    if(source && this.source && this.shader) gl.deleteShader(this.shader); 
+
+    // update source if needed
+    this.source = source || this.source;
+
+    let shader = gl.createShader(this.isVertexShader ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER);
+    gl.shaderSource(shader, this.source);
     gl.compileShader(shader);
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
       throw ("could not compile shader: \n" + gl.getShaderInfoLog(shader));
 
-    /** @member {WebGLShader} */
     this.shader = shader;
   }
-
-}
+};
 
 //-----------------------------------------------------------------------
 
@@ -394,31 +425,40 @@ nWGL.program = class {
   constructor(nWGL, shaders) {
     /** @member {nWGL} */
     this.nWGL = nWGL;
-
-    let gl = nWGL.gl;
-
     /** @member {nWGL.shader[]} */
     this.shaders = shaders;
-
-    let program = gl.createProgram();
-    for (let i = 0; i < shaders.length; i++) {
-      gl.attachShader(program, shaders[i].shader);
-    }
-
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-      throw "Unable to initialize the shader program: \n" + gl.getProgramInfoLog(program);
-
     /** @member {WebGLProgram} */
-    this.program = program;
-
+    this.program = null;
     /** @member {object} */
     this.uniforms = {};
     /** @member {object} */
     this.uniformsLocation = {};
     /** @member {object} */
     this.textures = {};
+
+    this.initProgram();
+  }
+  
+  /**
+   * Create a new WebGLProgram
+   * @param {nWGL.shader[]} - new shaders to attach to the program
+   */
+  initProgram(shaders){
+    let gl = this.nWGL.gl;
+
+    this.shaders = shaders || this.shaders;
+
+    let program = gl.createProgram();
+    for (let i = 0; i < this.shaders.length; i++) {
+      if(!Array.isArray(this.shaders) || !this.shaders[i] || !this.shaders[i].shader || !gl.isShader(this.shaders[i].shader) ) throw "something went wrong fella!";
+      gl.attachShader(program, this.shaders[i].shader);
+    }
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+      throw "Unable to initialize the shader program: \n" + gl.getProgramInfoLog(program);
+
+    this.program = program;
   }
 
   /**
@@ -434,13 +474,15 @@ nWGL.program = class {
       if (uniform.charAt(0) > 1 && uniform.charAt(uniform.length - 1) != 'v') {
         uniform += 'v';
       }
-      this.uniforms[name] = uniform;
 
+      this.uniforms[name] = uniform;
       this.uniformsLocation[name] = uniformLocation;
       return true;
     }
 
-    console.warn("Couldn't find '" + name + "' uniform!");
+    // dont show warnings for default uniforms
+    if(!(name == "u_resolution" || name == "u_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
+
     return false;
   }
 
@@ -461,6 +503,7 @@ nWGL.program = class {
    * @param {number} pos - texture's position
    * @param {string} name - texture's name
    * @param {WebGLTexture} tex - texture
+   * @param {GLenum} target - binding point(target)
    */
   setTexture(pos, name, tex, target) {
     let gl = this.nWGL.gl;
@@ -561,9 +604,6 @@ nWGL.framebuffer = class {
 
     /** @member {nWGL} */
     this.nWGL = nWGL;
-
-    let gl = nWGL.gl;
-
     /** @member {nWGL.texture[]} */
     this.textures = [];
     /** @member {WebGLFramebuffer} */
@@ -618,7 +658,10 @@ nWGL.framebuffer = class {
   setTexture(pos, tex) {
     let gl = this.nWGL.gl;
 
-    gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + pos, gl.TEXTURE_2D, tex, 0);
+    if(gl.isTexture(tex))
+      gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + pos, gl.TEXTURE_2D, tex, 0);
+    else
+      throw "that aint a texture!";  
   }
 
   /** @member {nWGL.texture[]} */
@@ -942,7 +985,7 @@ nWGL.main = class {
 
   set program(prog) {
     if(typeof prog === "string") prog = this.programs[prog]
-    else return console.error("there's something with the given params!");
+    else return console.error("oops, you gotta give the name of a program!");
 
     this.activeProgram = prog;
     this.gl.useProgram(this.activeProgram.program);
