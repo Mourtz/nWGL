@@ -1037,6 +1037,35 @@ nWGL.main = class {
     gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
   }
 
+  /**
+   * Magic!
+   * @param {function[]} calls - draw callback functions
+   * @param {string} [mode="TRIANGLES"] - render mode 
+   */
+  m_draw(calls, mode) {
+    if (calls.length == 0) console.log("fuck off!");
+    
+    let gl = this.gl;
+    for (let i = 0; i < calls.length; ++i){
+      // execute callback function
+      calls[i]();
+
+      if (this.activeProgram.uniforms["u_time"]) {
+        this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
+      }
+  
+      if (this.activeProgram.uniforms["u_mouse"]) {
+        this.setMouse();
+      }
+  
+      if (this.activeProgram.uniforms["u_frame"]) {
+        this.activeProgram.setUniform("u_frame", this.frame);
+      }
+      gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
+    }
+    ++this.frame;
+  }
+
   get program() { return this.activeProgram; }
 
   set program(prog) {
