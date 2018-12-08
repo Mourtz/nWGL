@@ -472,7 +472,7 @@ nWGL.program = class {
     let uniformLocation = gl.getUniformLocation(this.program, name);
 
     if (gl.getError() == gl.NO_ERROR && uniformLocation) {
-      if (uniform.charAt(0) > 1 && uniform.charAt(uniform.length - 1) != 'v') {
+      if (uniform.charAt(uniform.length - 1) != 'v') {
         uniform += 'v';
       }
 
@@ -874,7 +874,7 @@ nWGL.main = class {
    */
   setTexture(name, tex, pos, target) {
     if(typeof name !== "string") return console.error("not correct name!");
-    if(!(tex || this.textures[name])) return console.error("not correct texture!");
+    if( !( (tex && tex instanceof WebGLTexture) || this.textures[name]) ) return console.error("not correct texture!");
     
     this.activeProgram.setTexture(
       name,
@@ -882,6 +882,34 @@ nWGL.main = class {
       pos, 
       target
     );
+  }
+  
+  /**
+   * Set uniform of a specific program
+   * @param {string} - uniform's name 
+   * @param {float[]} data - data to pass to the uniform
+   * @param {string|nWGL.program} - program 
+   */
+  uniform(name, data, prog){
+    if (prog) {
+      if (typeof prog === "string") {
+        this.programs[prog].setUniform(name, data);      
+      } else if (prog instanceof nWGL.program) {
+        this.program = prog;
+        this.activeProgram.setUniform(name, data);
+      }
+    } else {
+      this.activeProgram.setUniform(name, data);
+    }
+  }
+
+  /**
+   * Binds given framebuffer to target
+   * @param {WebGLFramebuffer} framebuffer - framebuffer
+   * @param {string} [target="DRAW_FRAMEBUFFER"] - binding point(target)   
+   */
+  bindFramebuffer(framebuffer, target) {
+    this.gl.bindFramebuffer(this.gl[target || "DRAW_FRAMEBUFFER"], framebuffer);
   }
 
   /**
@@ -988,7 +1016,7 @@ nWGL.main = class {
 
   /**
    * Render function
-   * @param {GLenum} [mode=gl.TRIANGLES] - render mode
+   * @param {string} [mode="TRIANGLES"] - render mode
    */
   draw(mode) {
     let gl = this.gl;
