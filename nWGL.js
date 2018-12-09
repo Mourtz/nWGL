@@ -52,6 +52,7 @@ nWGL.texture = class {
    * @param {string} [opts.url=null] - filepath of the image you want to load.
    * @param {number} [opts.width=nWGL.canvas.width] - texture's width.
    * @param {number} [opts.height=nWGL.canvas.height] - texture's height.
+   * @param {ArrayBufferView} [opts.data] - texture's pixel data.
    */
   constructor(nWGL, opts) {
 
@@ -196,7 +197,8 @@ nWGL.texture = class {
     } else {
       this.width = opts.width || nWGL.canvas.width || 1024;
       this.height = opts.height || nWGL.canvas.height || 768;
-      this.createTexture(new this.dataType(this.width * this.height * this.colorChannels));
+      // there's no need to store pixel data on the host side
+      this.createTexture(opts.data || new this.dataType(this.width * this.height * this.colorChannels));
     }
   }
 
@@ -673,7 +675,7 @@ nWGL.framebuffer = class {
 
   /** @member {nWGL.texture[]} */
   get t() {
-    return this.texture;
+    return this.textures;
   }
   /** @member {nWGL.texture} */
   get t0() {
