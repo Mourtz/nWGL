@@ -832,6 +832,10 @@ nWGL.main = class {
     console.log("Initialized sandbox No."+ (++__T_CLONES__));
   }
 
+//----------------------------------------------
+//-------------- Texture Handlers --------------
+//----------------------------------------------
+
   /**
    * Adds a texture
    * @param {object} [opts] - texture's options
@@ -854,6 +858,29 @@ nWGL.main = class {
   }
 
   /**
+   * Sets/Adds a texture at a given position in the program
+   * @param {string} name - texture's name
+   * @param {WebGLTexture} [tex=this.textures[name].texture] - texture
+   * @param {number} [pos] - texture's position
+   * @param {target} [target=gl.TEXTURE_2D] - binding point
+   */
+  setTexture(name, tex, pos, target) {
+    if (typeof name !== "string") return console.error("not correct name!");
+    if (!((tex && tex instanceof WebGLTexture) || this.textures[name])) return console.error("not correct texture!");
+
+    this.activeProgram.setTexture(
+      name,
+      tex || this.textures[name].texture,
+      pos,
+      target
+    );
+  }
+
+//------------------------------------------
+//-------------- VBO Handlers --------------
+//------------------------------------------
+
+  /**
    * Adds a buffer
    * @param {object} [opts] - buffer's options
    * @param {string} name - buffer's name
@@ -865,52 +892,9 @@ nWGL.main = class {
     return buffer;
   }
 
-  /**
-   * Sets/Adds a texture at a given position in the program
-   * @param {string} name - texture's name
-   * @param {WebGLTexture} [tex=this.textures[name].texture] - texture
-   * @param {number} [pos] - texture's position
-   * @param {target} [target=gl.TEXTURE_2D] - binding point
-   */
-  setTexture(name, tex, pos, target) {
-    if(typeof name !== "string") return console.error("not correct name!");
-    if( !( (tex && tex instanceof WebGLTexture) || this.textures[name]) ) return console.error("not correct texture!");
-    
-    this.activeProgram.setTexture(
-      name,
-      tex || this.textures[name].texture,
-      pos, 
-      target
-    );
-  }
-  
-  /**
-   * Set uniform of a specific program
-   * @param {string} - uniform's name 
-   * @param {float[]} data - data to pass to the uniform
-   * @param {string|nWGL.program} - program 
-   */
-  uniform(name, data, prog){
-    if (prog) {
-      if (typeof prog === "string") {
-        this.programs[prog].setUniform(name, data);      
-      } else if (prog instanceof nWGL.program) {
-        this.program = prog;
-        this.activeProgram.setUniform(name, data);
-      }
-    } else {
-      this.activeProgram.setUniform(name, data);
-    }
-  }
-
-  /**
-   * Binds given framebuffer to target
-   * @param {WebGLFramebuffer} framebuffer - framebuffer
-   * @param {string} [target="DRAW_FRAMEBUFFER"] - binding point(target)   
-   */
-  bindFramebuffer(framebuffer, target) {
-    this.gl.bindFramebuffer(this.gl[target || "DRAW_FRAMEBUFFER"], framebuffer);
-  }
+//---------------------------------------------
+//-------------- Shader Handlers --------------
+//---------------------------------------------
 
   /**
    * Adds a shader
@@ -929,6 +913,10 @@ nWGL.main = class {
 
     return shader;
   }
+
+//----------------------------------------------
+//-------------- Program Handlers --------------
+//----------------------------------------------
 
   /**
    * Adds a program
@@ -963,12 +951,35 @@ nWGL.main = class {
   }
 
   /**
+   * Set uniform of a specific program
+   * @param {string} - uniform's name 
+   * @param {float[]} data - data to pass to the uniform
+   * @param {string|nWGL.program} - program 
+   */
+  uniform(name, data, prog) {
+    if (prog) {
+      if (typeof prog === "string") {
+        this.programs[prog].setUniform(name, data);
+      } else if (prog instanceof nWGL.program) {
+        this.program = prog;
+        this.activeProgram.setUniform(name, data);
+      }
+    } else {
+      this.activeProgram.setUniform(name, data);
+    }
+  }
+
+  /**
    * Release active program
    */
   releaseProgram() {
     this.activeProgram = null;
     this.gl.useProgram(this.activeProgram);
   }
+
+//------------------------------------------
+//-------------- FBO Handlers --------------
+//------------------------------------------
 
   /**
    * Adds a framebuffer
@@ -1000,6 +1011,19 @@ nWGL.main = class {
   }
 
   /**
+   * Binds given framebuffer to target
+   * @param {WebGLFramebuffer} framebuffer - framebuffer
+   * @param {string} [target="DRAW_FRAMEBUFFER"] - binding point(target)   
+   */
+  bindFramebuffer(framebuffer, target) {
+    this.gl.bindFramebuffer(this.gl[target || "DRAW_FRAMEBUFFER"], framebuffer);
+  }
+
+//-----------------------------------------------
+//-------------- Mouse Pos Handler --------------
+//-----------------------------------------------
+
+  /**
    * Gets the real mouse position in canvas and passes it
    * to the assigned uniform
    */
@@ -1013,6 +1037,10 @@ nWGL.main = class {
       this.activeProgram.setUniform("u_mouse", mouse.x - rect.left, this.canvas.height - (mouse.y - rect.top))
     }
   }
+
+//--------------------------------------------
+//-------------- Draw functions --------------
+//--------------------------------------------
 
   /**
    * Render function
@@ -1066,11 +1094,12 @@ nWGL.main = class {
     ++this.frame;
   }
 
+//------------ Program Getter/Setter ------------
   get program() { return this.activeProgram; }
 
   set program(prog) {
-    if(typeof prog === "string") prog = this.programs[prog]
-    else return console.error("oops, you gotta give the name of a program!");
+    if(typeof prog === "string" && this.programs[prog]) prog = this.programs[prog];
+    else if(!(prog instanceof nWGL.program)) return console.error("oops, you gotta give the name of a program!");
 
     this.activeProgram = prog;
     this.gl.useProgram(this.activeProgram.program);
