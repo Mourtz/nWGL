@@ -602,8 +602,8 @@ nWGL.framebuffer = class {
   /**
    * @param {nWGL.main} nWGL - nWGL reference
    * @param {object} [opts] - framebuffer's options
-   * @param {number} [opts.totalBuffers = 1] - total draw buffers.
    * @param {string} [opts.internalformat = "RGBA"] - texture's internalformat ("sRGB8", "RGBA32F" etc.).
+   * @param {number} [opts.totalBuffers = (opts.internalformat.length | 1)] - total draw buffers.
    * @param {string} [opts.url=null] - filepath of the image you want to load.
    * @param {number} [opts.width=nWGL.canvas.width] - texture's width.
    * @param {number} [opts.height=nWGL.canvas.height] - texture's height.
@@ -618,7 +618,7 @@ nWGL.framebuffer = class {
     /** @member {WebGLFramebuffer} */
     this.framebuffer = null;
     /** @member {number} */
-    this.totalBuffers = opts.totalBuffers || 1;
+    this.totalBuffers = opts.totalBuffers || (opts.internalformat && Array.isArray(opts.internalformat) && opts.internalformat.length) || 1;
 
     this.createFrameBuffer(opts);
   }
