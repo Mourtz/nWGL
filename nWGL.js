@@ -452,7 +452,7 @@ nWGL.program = class {
 
     let program = gl.createProgram();
     for (let i = 0; i < this.shaders.length; i++) {
-      if(!Array.isArray(this.shaders) || !this.shaders[i] || !this.shaders[i].shader || !gl.isShader(this.shaders[i].shader) ) throw "something went wrong fella!";
+      if(!Array.isArray(this.shaders) || !this.shaders[i] || !(this.shaders[i] instanceof nWGL.shader) || !gl.isShader(this.shaders[i].shader) ) throw "something went wrong fella!";
       gl.attachShader(program, this.shaders[i].shader);
     }
     gl.linkProgram(program);
@@ -922,10 +922,15 @@ nWGL.main = class {
 
   /**
    * Adds a program
-   * @param {nWGL.shader[]} shaders - program's shaders
+   * @param {nWGL.shader[] || string[]} shaders - program's shaders
    * @param {string} name - program's name
    */
   addProgram(shaders, name) {
+    if(Array.isArray(shaders))
+      for(let i = 0; i < shaders.length; ++i) 
+        if(typeof shaders[i] == "string")  
+          shaders[i] = this.shaders[shaders[i]];
+
     let program = new nWGL.program(this, shaders);
     this.programs[name] = program;
 
