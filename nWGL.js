@@ -748,6 +748,40 @@ nWGL.framebuffer = class {
   }
 };
 
+/**
+ * nWGL pass
+ */
+nWGL.pass = class {
+  constructor(nWGL, opts){
+    /** local references */
+    this.nWGL = nWGL;
+
+    /** variables */
+    this.call = opts.call;
+    this.swapBuffer = opts.swapBuffer || false;
+    this.mode = opts.mode || "TRIANGLES";
+  }
+
+  render(){
+    // execute callback function
+    this.call();
+
+    if (this.nWGL.activeProgram.uniforms["u_time"]) {
+      this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
+    }
+
+    if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
+      this.nWGL.setMouse();
+    }
+
+    if (this.nWGL.activeProgram.uniforms["u_frame"]) {
+      this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
+    }
+
+    this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, 6);
+  }
+};
+
 //-----------------------------------------------------------------------
 //-------------------------------- MAIN ---------------------------------
 //-----------------------------------------------------------------------
@@ -916,6 +950,24 @@ nWGL.main = class {
     return shader;
   }
 
+  /**
+   * Adds a shader
+   * @param {string} source - shader's source
+   * @param {boolean} isVert - is a Vertex Shader?
+   * @param {string} name - shader's name?
+   */
+  addShader2(source, isVert, name) {
+    console.log("⮚ %cAdding (" + name + ") shader.....", "color:#00e6e6");
+
+    let shader = new nWGL.shader(this.gl, {
+      "isVert": isVert,
+      "string": source
+    });
+    this.shaders[name] = shader;
+
+    return shader;
+  }
+
 //----------------------------------------------
 //-------------- Program Handlers --------------
 //----------------------------------------------
@@ -955,6 +1007,35 @@ nWGL.main = class {
     }
 
     return program;
+  }
+
+  addCopyShaderProgram(){
+    return addProgram([
+      addShader2(`
+        #version 300 es
+
+        precision highp float;
+        
+        layout(location = 0) in vec2 a_position;
+        
+        void main(void) {
+            gl_Position.xy = a_position;
+        }
+      `, true, "copy_vertex_shader"), 
+      addShader2(`
+        #version 300 es
+
+        precision highp float;
+
+        layout(location = 0) out highp vec4 FragColor;
+        
+        uniform sampler2D u_tex;
+              
+        void main() {
+          FragColor = texelFetch( u_tex, ivec2(gl_FragCoord.xy), 0 );
+        }
+      `, false, "copy_fragment_shader")
+    ], "copyShaderProgram");
   }
 
   /**
@@ -1074,30 +1155,11 @@ nWGL.main = class {
 
   /**
    * Magic!
-   * @param {function[]} calls - draw callback functions
-   * @param {string} [mode="TRIANGLES"] - render mode 
+   * @param {nWGL.pass[]} calls - draw callback functions
    */
-  m_draw(calls, mode) {
-    if (calls.length == 0) console.log("fuck off!");
-    
-    let gl = this.gl;
-    for (let i = 0; i < calls.length; ++i){
-      // execute callback function
-      calls[i]();
-
-      if (this.activeProgram.uniforms["u_time"]) {
-        this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
-      }
-  
-      if (this.activeProgram.uniforms["u_mouse"]) {
-        this.setMouse();
-      }
-  
-      if (this.activeProgram.uniforms["u_frame"]) {
-        this.activeProgram.setUniform("u_frame", this.frame);
-      }
-      gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
-    }
+  m_draw(...calls) {
+    for (const call of calls) 
+      call.render();
     ++this.frame;
   }
 
