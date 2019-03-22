@@ -514,6 +514,7 @@ nWGL.program = class {
     if(!tex || !name) return;
 
     pos = pos || this.textureIndex[name] || 0; 
+    this.nWGL.bounded_textures[pos] = tex;
 
     let gl = this.nWGL.gl;
     gl.activeTexture(gl.TEXTURE0 + pos);
@@ -756,29 +757,41 @@ nWGL.pass = class {
     /** local references */
     this.nWGL = nWGL;
 
+    this.multiple = Array.isArray(opts);
+    if(!this.multiple)
+      opts = [opts];
+
     /** variables */
-    this.call = opts.call;
-    this.swapBuffer = opts.swapBuffer || false;
-    this.mode = opts.mode || "TRIANGLES";
+    this.call = [];
+    this.swapBuffer = [];
+    this.mode = [];
+
+    for (const opt of opts){
+      this.call.push(opt.call);
+      this.swapBuffer.push(opt.swapBuffer || false);
+      this.mode.push(opt.mode || "TRIANGLES");
+    } 
   }
 
   render(){
-    // execute callback function
-    this.call();
+    for(let i = 0; i < this.call.length; ++i){
+      // execute callback function
+      this.call[i]();
 
-    if (this.nWGL.activeProgram.uniforms["u_time"]) {
-      this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
+      if (this.nWGL.activeProgram.uniforms["u_time"]) {
+        this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
+      }
+
+      if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
+        this.nWGL.setMouse();
+      }
+
+      if (this.nWGL.activeProgram.uniforms["u_frame"]) {
+        this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
+      }
+
+      this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode[i] || "TRIANGLES"], 0, 6);
     }
-
-    if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
-      this.nWGL.setMouse();
-    }
-
-    if (this.nWGL.activeProgram.uniforms["u_frame"]) {
-      this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
-    }
-
-    this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, 6);
   }
 };
 
@@ -821,14 +834,21 @@ nWGL.main = class {
     this.gl = gl;
 
     // WebGL2 extensions
-    gl.getExtension('EXT_color_buffer_float');
-    gl.getExtension('OES_texture_float_linear');
-
+    if(opts.enableFloatEXT){
+      console.log("%c👍 %cEnabling float etensions...", "color:#ff0000", "color:#121212");
+      gl.getExtension('EXT_color_buffer_float');
+      gl.getExtension('OES_texture_float_linear');
+    }
     /** @member {number} */
     this.loadTime = performance.now();
 
     /** @member {object} */
     this.textures = {};
+    /** @member {object} */
+    this.bounded_textures = {};
+    for(let i = 0; i < 16; ++i) this.bounded_textures[i] = null;
+    if(Object.seal) Object.seal(this.bounded_textures);
+
     /** @member {object} */
     this.cubemap_textures = {};
     /** @member {object} */
