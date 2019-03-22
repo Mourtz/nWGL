@@ -105,10 +105,10 @@ nWGL.texture = class {
         this.type = gl.UNSIGNED_BYTE;
         break;
 
-        //------------------------------------------
-        //------------------------------------------
+      //------------------------------------------
+      //------------------------------------------
 
-        // RGB int16_t
+      // RGB int16_t
       case gl.RGB16I:
         this.colorChannels = 3;
         this.dataType = Int16Array;
@@ -117,7 +117,7 @@ nWGL.texture = class {
         this.type = gl.SHORT;
         break;
 
-        // RGBA int16_t
+      // RGBA int16_t
       case gl.RGBA16I:
         this.colorChannels = 4;
         this.dataType = Int16Array;
@@ -126,9 +126,9 @@ nWGL.texture = class {
         this.type = gl.SHORT;
         break;
 
-        //------------------------------------------
+      //------------------------------------------
 
-        // RGB int32_t
+      // RGB int32_t
       case gl.RGB32I:
         this.colorChannels = 3;
         this.dataType = Int32Array;
@@ -137,7 +137,7 @@ nWGL.texture = class {
         this.type = gl.INT;
         break;
 
-        // RGBA int32_t
+      // RGBA int32_t
       case gl.RGBA32I:
         this.colorChannels = 4;
         this.dataType = Int32Array;
@@ -146,10 +146,10 @@ nWGL.texture = class {
         this.type = gl.INT;
         break;
 
-        //------------------------------------------
-        //------------------------------------------
+      //------------------------------------------
+      //------------------------------------------
 
-        // RGB float16_t
+      // RGB float16_t
       case gl.RGB16F:
         this.colorChannels = 3;
         this.dataType = Float32Array;
@@ -158,7 +158,7 @@ nWGL.texture = class {
         this.type = gl.HALF_FLOAT;
         break;
 
-        // RGBA float16_t
+      // RGBA float16_t
       case gl.RGBA16F:
         this.colorChannels = 4;
         this.dataType = Float32Array;
@@ -167,9 +167,9 @@ nWGL.texture = class {
         this.type = gl.HALF_FLOAT;
         break;
 
-        //------------------------------------------
+      //------------------------------------------
 
-        // RGB float32_t
+      // RGB float32_t
       case gl.RGB32F:
         this.colorChannels = 3;
         this.dataType = Float32Array;
@@ -178,7 +178,7 @@ nWGL.texture = class {
         this.type = gl.FLOAT;
         break;
 
-        // RGBA float32_t
+      // RGBA float32_t
       case gl.RGBA32F:
         this.colorChannels = 4;
         this.dataType = Float32Array;
@@ -255,12 +255,12 @@ nWGL.texture = class {
    * @param {nWGL.texture | WebGLTexture} tex
    */
   swap(tex) {
-    if(tex instanceof nWGL.texture){
+    if (tex instanceof nWGL.texture) {
       let temp = {};
       Object.assign(temp, this);
       Object.assign(this, tex);
       Object.assign(tex, temp);
-    } else if(this.nWGL.gl.isTexture(tex)) {
+    } else if (this.nWGL.gl.isTexture(tex)) {
       let temp = this.texture;
       this.texture = tex;
       tex = temp;
@@ -331,12 +331,12 @@ nWGL.cubemap = class {
       throw "You must pass 6 images to create a cubemap!";
     }
 
-    let sandbox = this; 
+    let sandbox = this;
     {
       let texture = gl.createTexture();
 
       const targets = [gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-                       gl.TEXTURE_CUBE_MAP_POSITIVE_X, gl.TEXTURE_CUBE_MAP_POSITIVE_Y, gl.TEXTURE_CUBE_MAP_POSITIVE_Z];
+      gl.TEXTURE_CUBE_MAP_POSITIVE_X, gl.TEXTURE_CUBE_MAP_POSITIVE_Y, gl.TEXTURE_CUBE_MAP_POSITIVE_Z];
 
       for (let i = 0; i < 6; ++i) {
         let image = new Image();
@@ -394,11 +394,11 @@ nWGL.shader = class {
    * Compiles the shader
    * @param {string} [source=this.source] - the new source of the shader
    */
-  compile(source){
+  compile(source) {
     let gl = this.gl;
 
     // mark previous shader for deletion
-    if(source && this.source && this.shader) gl.deleteShader(this.shader); 
+    if (source && this.source && this.shader) gl.deleteShader(this.shader);
 
     // update source if needed
     this.source = source || this.source;
@@ -440,19 +440,19 @@ nWGL.program = class {
 
     this.initProgram();
   }
-  
+
   /**
    * Create a new WebGLProgram
    * @param {nWGL.shader[]} - new shaders to attach to the program
    */
-  initProgram(shaders){
+  initProgram(shaders) {
     let gl = this.nWGL.gl;
 
     this.shaders = shaders || this.shaders;
 
     let program = gl.createProgram();
     for (let i = 0; i < this.shaders.length; i++) {
-      if(!Array.isArray(this.shaders) || !this.shaders[i] || !(this.shaders[i] instanceof nWGL.shader) || !gl.isShader(this.shaders[i].shader) ) throw "something went wrong fella!";
+      if (!Array.isArray(this.shaders) || !this.shaders[i] || !(this.shaders[i] instanceof nWGL.shader) || !gl.isShader(this.shaders[i].shader)) throw "something went wrong fella!";
       gl.attachShader(program, this.shaders[i].shader);
     }
     gl.linkProgram(program);
@@ -481,12 +481,12 @@ nWGL.program = class {
       this.uniforms[name] = uniform;
       this.uniformsLocation[name] = uniformLocation;
 
-      if(data.length > 0) this.setUniform(name, data);
+      if (data.length > 0) this.setUniform(name, data);
       return true;
     }
 
     // dont show warnings for default uniforms
-    if(!(name == "u_resolution" || name == "u_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
+    if (!(name == "u_resolution" || name == "u_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
 
     return false;
   }
@@ -499,7 +499,7 @@ nWGL.program = class {
   setUniform(name, ...data) {
     let gl = this.nWGL.gl;
 
-    if(this.uniformsLocation[name])
+    if (this.uniformsLocation[name])
       gl["uniform" + this.uniforms[name]](this.uniformsLocation[name], data);
   }
 
@@ -511,9 +511,9 @@ nWGL.program = class {
    * @param {GLenum} [target=gl.TEXTURE_2D] - binding point(target)
    */
   setTexture(name, tex, pos, target) {
-    if(!tex || !name) return;
+    if (!tex || !name) return;
 
-    pos = pos || this.textureIndex[name] || 0; 
+    pos = pos || this.textureIndex[name] || 0;
     this.nWGL.bounded_textures[pos] = tex;
 
     let gl = this.nWGL.gl;
@@ -528,7 +528,7 @@ nWGL.program = class {
    * Reorganizes textures using the "textureIndex" array 
    * @param {object} textures
    */
-  refitTextures(textures){
+  refitTextures(textures) {
     let names = Object.keys(this.textureIndex);
     for (let name in names) {
       this.setTexture(name, textures[name].tex);
@@ -638,8 +638,8 @@ nWGL.framebuffer = class {
 
     let drawBuffers = [];
     for (let i = 0; i < this.totalBuffers; ++i) {
-      if(Array.isArray(opts.internalformat)){
-        this.textures[i] = new nWGL.texture(this.nWGL, {"internalformat": opts.internalformat[Math.min(i, opts.internalformat.length - 1)]} );
+      if (Array.isArray(opts.internalformat)) {
+        this.textures[i] = new nWGL.texture(this.nWGL, { "internalformat": opts.internalformat[Math.min(i, opts.internalformat.length - 1)] });
       } else {
         this.textures[i] = new nWGL.texture(this.nWGL, opts);
       }
@@ -668,10 +668,10 @@ nWGL.framebuffer = class {
   setTexture(pos, tex) {
     let gl = this.nWGL.gl;
 
-    if(gl.isTexture(tex))
+    if (gl.isTexture(tex))
       gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + pos, gl.TEXTURE_2D, tex, 0);
     else
-      throw "that aint a texture!";  
+      throw "that aint a texture!";
   }
 
   /** @member {nWGL.texture[]} */
@@ -753,12 +753,12 @@ nWGL.framebuffer = class {
  * nWGL pass
  */
 nWGL.pass = class {
-  constructor(nWGL, opts){
+  constructor(nWGL, opts) {
     /** local references */
     this.nWGL = nWGL;
 
     this.multiple = Array.isArray(opts);
-    if(!this.multiple)
+    if (!this.multiple)
       opts = [opts];
 
     /** variables */
@@ -766,15 +766,15 @@ nWGL.pass = class {
     this.swapBuffer = [];
     this.mode = [];
 
-    for (const opt of opts){
+    for (const opt of opts) {
       this.call.push(opt.call);
       this.swapBuffer.push(opt.swapBuffer || false);
       this.mode.push(opt.mode || "TRIANGLES");
-    } 
+    }
   }
 
-  render(){
-    for(let i = 0; i < this.call.length; ++i){
+  render() {
+    for (let i = 0; i < this.call.length; ++i) {
       // execute callback function
       this.call[i]();
 
@@ -834,7 +834,7 @@ nWGL.main = class {
     this.gl = gl;
 
     // WebGL2 extensions
-    if(opts.enableFloatEXT){
+    if (opts.enableFloatEXT) {
       console.log("%c👍 %cEnabling float etensions...", "color:#ff0000", "color:#121212");
       gl.getExtension('EXT_color_buffer_float');
       gl.getExtension('OES_texture_float_linear');
@@ -846,8 +846,8 @@ nWGL.main = class {
     this.textures = {};
     /** @member {object} */
     this.bounded_textures = {};
-    for(let i = 0; i < 16; ++i) this.bounded_textures[i] = null;
-    if(Object.seal) Object.seal(this.bounded_textures);
+    for (let i = 0; i < 16; ++i) this.bounded_textures[i] = null;
+    if (Object.seal) Object.seal(this.bounded_textures);
 
     /** @member {object} */
     this.cubemap_textures = {};
@@ -885,12 +885,12 @@ nWGL.main = class {
       this.mouse.y = e.clientY || e.pageY;
     }, false);
 
-    console.log("Initialized sandbox No."+ (++__T_CLONES__));
+    console.log("Initialized sandbox No." + (++__T_CLONES__));
   }
 
-//----------------------------------------------
-//-------------- Texture Handlers --------------
-//----------------------------------------------
+  //----------------------------------------------
+  //-------------- Texture Handlers --------------
+  //----------------------------------------------
 
   /**
    * Adds a texture
@@ -932,9 +932,9 @@ nWGL.main = class {
     );
   }
 
-//------------------------------------------
-//-------------- VBO Handlers --------------
-//------------------------------------------
+  //------------------------------------------
+  //-------------- VBO Handlers --------------
+  //------------------------------------------
 
   /**
    * Adds a buffer
@@ -948,9 +948,9 @@ nWGL.main = class {
     return buffer;
   }
 
-//---------------------------------------------
-//-------------- Shader Handlers --------------
-//---------------------------------------------
+  //---------------------------------------------
+  //-------------- Shader Handlers --------------
+  //---------------------------------------------
 
   /**
    * Adds a shader
@@ -988,9 +988,9 @@ nWGL.main = class {
     return shader;
   }
 
-//----------------------------------------------
-//-------------- Program Handlers --------------
-//----------------------------------------------
+  //----------------------------------------------
+  //-------------- Program Handlers --------------
+  //----------------------------------------------
 
   /**
    * Adds a program
@@ -998,9 +998,9 @@ nWGL.main = class {
    * @param {string} name - program's name
    */
   addProgram(shaders, name) {
-    if(Array.isArray(shaders))
-      for(let i = 0; i < shaders.length; ++i) 
-        if(typeof shaders[i] == "string")  
+    if (Array.isArray(shaders))
+      for (let i = 0; i < shaders.length; ++i)
+        if (typeof shaders[i] == "string")
           shaders[i] = this.shaders[shaders[i]];
 
     let program = new nWGL.program(this, shaders);
@@ -1029,7 +1029,7 @@ nWGL.main = class {
     return program;
   }
 
-  addCopyShaderProgram(){
+  addCopyShaderProgram() {
     return addProgram([
       addShader2(`
         #version 300 es
@@ -1041,7 +1041,7 @@ nWGL.main = class {
         void main(void) {
             gl_Position.xy = a_position;
         }
-      `, true, "copy_vertex_shader"), 
+      `, true, "copy_vertex_shader"),
       addShader2(`
         #version 300 es
 
@@ -1085,9 +1085,9 @@ nWGL.main = class {
     this.gl.useProgram(this.activeProgram);
   }
 
-//------------------------------------------
-//-------------- FBO Handlers --------------
-//------------------------------------------
+  //------------------------------------------
+  //-------------- FBO Handlers --------------
+  //------------------------------------------
 
   /**
    * Adds a framebuffer
@@ -1096,7 +1096,7 @@ nWGL.main = class {
    */
   addFrameBuffer(opts, name) {
     console.log("⮚ %cAdding (" + name + ") framebuffer.....", "color:#661aff");
-    
+
     this.framebuffers[name] = new nWGL.framebuffer(this, opts);
     this.fbo_names.push(name);
 
@@ -1107,8 +1107,8 @@ nWGL.main = class {
    * Get framebuffer
    * @param {number | string} index - framebuffer's index
    */
-  getFrameBuffer(index){
-    switch(typeof index){
+  getFrameBuffer(index) {
+    switch (typeof index) {
       case "number":
         return this.framebuffers[this.fbo_names[index]] || null;
       case "string":
@@ -1127,9 +1127,9 @@ nWGL.main = class {
     this.gl.bindFramebuffer(this.gl[target || "DRAW_FRAMEBUFFER"], framebuffer);
   }
 
-//-----------------------------------------------
-//-------------- Mouse Pos Handler --------------
-//-----------------------------------------------
+  //-----------------------------------------------
+  //-------------- Mouse Pos Handler --------------
+  //-----------------------------------------------
 
   /**
    * Gets the real mouse position in canvas and passes it
@@ -1146,9 +1146,9 @@ nWGL.main = class {
     }
   }
 
-//--------------------------------------------
-//-------------- Draw functions --------------
-//--------------------------------------------
+  //--------------------------------------------
+  //-------------- Draw functions --------------
+  //--------------------------------------------
 
   /**
    * Render function
@@ -1178,17 +1178,17 @@ nWGL.main = class {
    * @param {nWGL.pass[]} calls - draw callback functions
    */
   m_draw(...calls) {
-    for (const call of calls) 
+    for (const call of calls)
       call.render();
     ++this.frame;
   }
 
-//------------ Program Getter/Setter ------------
+  //------------ Program Getter/Setter ------------
   get program() { return this.activeProgram; }
 
   set program(prog) {
-    if(typeof prog === "string" && this.programs[prog]) prog = this.programs[prog];
-    else if(!(prog instanceof nWGL.program)) return console.error("oops, you gotta give the name of a program!");
+    if (typeof prog === "string" && this.programs[prog]) prog = this.programs[prog];
+    else if (!(prog instanceof nWGL.program)) return console.error("oops, you gotta give the name of a program!");
 
     this.activeProgram = prog;
     this.gl.useProgram(this.activeProgram.program);
