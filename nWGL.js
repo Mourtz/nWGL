@@ -879,8 +879,6 @@ nWGL.main = class {
     this.buffers = {};
     /** @member {object} */
     this.framebuffers = {};
-    /** @member {string[]} */
-    this.fbo_names = [];
     /** @member {nWGL.program} */
     this.activeProgram = null;
     /** @member {number} */
@@ -1176,11 +1174,7 @@ nWGL.main = class {
    */
   addFrameBuffer(opts, name) {
     console.log("⮚ %cAdding (" + name + ") framebuffer.....", "color:#661aff");
-
-    this.framebuffers[name] = new nWGL.framebuffer(this, opts);
-    this.fbo_names.push(name);
-
-    return this.framebuffers[name];
+    return (this.framebuffers[name] = new nWGL.framebuffer(this, opts));
   }
 
   /**
@@ -1190,7 +1184,7 @@ nWGL.main = class {
   getFrameBuffer(index) {
     switch (typeof index) {
       case "number":
-        return this.framebuffers[this.fbo_names[index]] || null;
+        return this.framebuffers[ Object.keys(this.framebuffers)[index] ] || null;
       case "string":
         return this.framebuffers[index] || null;
       default:
