@@ -360,6 +360,13 @@ nWGL.cubemap = class {
     }
   }
 
+  /**
+   * Deletes WebGLTexture
+   */
+  delete() {
+    this.nWGL.gl.deleteTexture(this.texture);
+  }
+
   get tex() {
     return this.texture;
   }
@@ -533,6 +540,13 @@ nWGL.program = class {
     for (let name in names) {
       this.setTexture(name, textures[name].tex);
     }
+  }
+
+  /**
+   * Delete WebGLProgram
+   */
+  delete(){
+    this.nWGL.gl.deleteProgram(this.program);
   }
 };
 
@@ -914,6 +928,20 @@ nWGL.main = class {
     return tex;
   }
 
+  /**
+   * Delete texture
+   * @param {string} name - texture's name
+   */
+  deleteTexture(name){
+    this.textures[name].delete();
+    delete this.textures[name];
+  }
+
+  /**
+   * Adds a cubemap texture
+   * @param {object} opts - cubemap's options
+   * @param {string} name - cubemap's name 
+   */
   addCubemap(opts, name) {
     let tex = new nWGL.cubemap(this, opts);
     this.cubemap_textures[name] = tex;
@@ -922,22 +950,12 @@ nWGL.main = class {
   }
 
   /**
-   * Sets/Adds a texture at a given position in the program
-   * @param {string} name - texture's name
-   * @param {WebGLTexture} [tex=this.textures[name].texture] - texture
-   * @param {number} [pos] - texture's position
-   * @param {target} [target=gl.TEXTURE_2D] - binding point
+   * delete cubemap
+   * @param {string} name - cubemap's name 
    */
-  setTexture(name, tex, pos, target) {
-    if (typeof name !== "string") return console.error("not correct name!");
-    if (!((tex && tex instanceof WebGLTexture) || this.textures[name])) return console.error("not correct texture!");
-
-    this.activeProgram.setTexture(
-      name,
-      tex || this.textures[name].texture,
-      pos,
-      target
-    );
+  deleteCubemap(name) {
+    this.cubemap_textures[name].delete();
+    delete this.cubemap_textures[name];
   }
 
   //------------------------------------------
@@ -961,7 +979,7 @@ nWGL.main = class {
   //------------------------------------------
 
   /**
-   * Adds a buffer
+   * Adds a pass
    * @param {nWGL.pass | Function[]} [opts] - buffer's options
    */
   addPass(pass) {
@@ -1112,11 +1130,39 @@ nWGL.main = class {
   }
 
   /**
+   * Sets/Adds a texture at a given position in active program
+   * @param {string} name - texture's name
+   * @param {WebGLTexture} [tex=this.textures[name].texture] - texture
+   * @param {number} [pos] - texture's position
+   * @param {target} [target=gl.TEXTURE_2D] - binding point
+   */
+  setTexture(name, tex, pos, target) {
+    if (typeof name !== "string") return console.error("not correct name!");
+    if (!((tex && tex instanceof WebGLTexture) || this.textures[name])) return console.error("not correct texture!");
+
+    this.activeProgram.setTexture(
+      name,
+      tex || this.textures[name].texture,
+      pos,
+      target
+    );
+  }
+
+  /**
    * Release active program
    */
-  releaseProgram() {
+  releaseActiveProgram() {
     this.activeProgram = null;
     this.gl.useProgram(this.activeProgram);
+  }
+
+  /**
+   * Delete program
+   * @param {string} name - program's name
+   */
+  deleteProgram(name){
+    this.programs[name].delete();
+    delete this.programs[name] ;
   }
 
   //------------------------------------------
