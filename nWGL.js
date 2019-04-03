@@ -793,6 +793,12 @@ nWGL.pass = class {
       this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode[i] || "TRIANGLES"], 0, 6);
     }
   }
+
+  remove(){
+    let pos = this.nWGL.passes.indexOf(this);
+    if(pos !== -1)
+      delete this.nWGL.passes.splice(pos, 1);
+  }
 };
 
 //-----------------------------------------------------------------------
@@ -865,6 +871,8 @@ nWGL.main = class {
     this.activeProgram = null;
     /** @member {number} */
     this.frame = 0;
+    /** @member {nWGL.pass[]} */
+    this.passes = [];
 
     // vbo
     this.addBuffer({
@@ -946,6 +954,32 @@ nWGL.main = class {
     this.buffers[name] = buffer;
 
     return buffer;
+  }
+
+  //------------------------------------------
+  //-------------- Pass Handlers --------------
+  //------------------------------------------
+
+  /**
+   * Adds a buffer
+   * @param {nWGL.pass | Function[]} [opts] - buffer's options
+   */
+  addPass(pass) {
+    if(pass === undefined) return null;
+
+    if(
+      Array.isArray(pass) && 
+      pass.length > 0 &&
+      pass[0] instanceof Function
+    ){
+      pass = new nWGL.pass(this, pass);
+    } else if(!(pass instanceof nWGL.pass)){
+      return null;
+    }
+
+    this.passes.push(pass);
+
+    return pass;
   }
 
   //---------------------------------------------
@@ -1155,8 +1189,10 @@ nWGL.main = class {
    * @param {string} [mode="TRIANGLES"] - render mode
    */
   draw(mode) {
-    let gl = this.gl;
     ++this.frame;
+
+    for (const pass of this.passes)
+      pass.render();
 
     if (this.activeProgram.uniforms["u_time"]) {
       this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
@@ -1170,17 +1206,7 @@ nWGL.main = class {
       this.activeProgram.setUniform("u_frame", this.frame);
     }
 
-    gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
-  }
-
-  /**
-   * Magic!
-   * @param {nWGL.pass[]} calls - draw callback functions
-   */
-  m_draw(...calls) {
-    for (const call of calls)
-      call.render();
-    ++this.frame;
+    this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
   }
 
   //------------ Program Getter/Setter ------------
