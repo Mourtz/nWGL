@@ -155,7 +155,7 @@ nWGL.texture = class {
       // RGB float16_t
       case gl.RGB16F:
         this.colorChannels = 3;
-        this.dataType = Float32Array;
+        this.dataType = Uint16Array;
 
         this.format = gl.RGB;
         this.type = gl.HALF_FLOAT;
@@ -165,7 +165,7 @@ nWGL.texture = class {
       // RGBA float16_t
       case gl.RGBA16F:
         this.colorChannels = 4;
-        this.dataType = Float32Array;
+        this.dataType = Uint16Array;
 
         this.format = gl.RGBA;
         this.type = gl.HALF_FLOAT;
