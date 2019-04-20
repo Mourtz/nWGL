@@ -10,6 +10,9 @@
  */
 var nWGL = nWGL || {};
 
+// total instances of nWGL.main
+nWGL["__T_CLONES__"] = 0;
+
 /**
  * Get text from an external file
  * @param {string} - filepath
@@ -156,6 +159,7 @@ nWGL.texture = class {
 
         this.format = gl.RGB;
         this.type = gl.HALF_FLOAT;
+        this.nWGL.enableFloatEXT();
         break;
 
       // RGBA float16_t
@@ -165,6 +169,7 @@ nWGL.texture = class {
 
         this.format = gl.RGBA;
         this.type = gl.HALF_FLOAT;
+        this.nWGL.enableFloatEXT();
         break;
 
       //------------------------------------------
@@ -176,6 +181,7 @@ nWGL.texture = class {
 
         this.format = gl.RGB;
         this.type = gl.FLOAT;
+        this.nWGL.enableFloatEXT();
         break;
 
       // RGBA float32_t
@@ -185,6 +191,7 @@ nWGL.texture = class {
 
         this.format = gl.RGBA;
         this.type = gl.FLOAT;
+        this.nWGL.enableFloatEXT();
         break;
 
       default:
@@ -274,6 +281,13 @@ nWGL.texture = class {
    */
   delete() {
     this.nWGL.gl.deleteTexture(this.texture);
+  }
+
+  /**
+   * Clone Texture
+   */
+  clone(){
+    return Object.assign(Object.create(this), this);
   }
 
   // texture getter
@@ -819,8 +833,6 @@ nWGL.pass = class {
 //-------------------------------- MAIN ---------------------------------
 //-----------------------------------------------------------------------
 
-let __T_CLONES__ = 0;
-
 /**
  * nWGL
  */
@@ -854,11 +866,11 @@ nWGL.main = class {
     this.gl = gl;
 
     // WebGL2 extensions
+    this.FP_SUPP = false; 
     if (opts.enableFloatEXT) {
-      console.log("%c👍 %cEnabling float etensions...", "color:#ff0000", "color:#121212");
-      gl.getExtension('EXT_color_buffer_float');
-      gl.getExtension('OES_texture_float_linear');
+      this.enableFloatEXT();
     }
+
     /** @member {number} */
     this.loadTime = performance.now();
 
@@ -905,7 +917,26 @@ nWGL.main = class {
       this.mouse.y = e.clientY || e.pageY;
     }, false);
 
-    console.log("Initialized sandbox No." + (++__T_CLONES__));
+    console.log("Initialized sandbox No." + (++nWGL.__T_CLONES__));
+  }
+
+  enableFloatEXT(){
+    if(this.FP_SUPP) return;
+    
+    let extensions = Object.values(this.gl.getSupportedExtensions());
+
+    console.log("%c👍 %cEnabling float etensions...", "color:#ff0000", "color:#121212");
+    if(extensions.includes("EXT_color_buffer_float"))
+      this.gl.getExtension('EXT_color_buffer_float');
+    else
+      console.warn('"EXT_color_buffer_float" could not be detected! Check your browser\'s flag' );
+    
+    if(extensions.includes("EXT_color_buffer_float"))
+      this.gl.getExtension('OES_texture_float_linear');
+    else
+      console.warn('"OES_texture_float_linear" could not be detected! Check your browser\'s flag' );
+
+    this.FP_SUPP = true;
   }
 
   //----------------------------------------------
