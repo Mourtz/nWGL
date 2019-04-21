@@ -801,7 +801,12 @@ nWGL.pass = class {
     this.mode = [];
 
     for (const opt of opts) {
-      this.call.push(opt.call);
+      if(opt.call) this.call.push({"f": opt.call, "p": true});
+      else if(opt.compute) this.call.push({"f": opt.compute, "p": false});
+      else {
+        console.error("couldn't detect any kind of pass!");
+        continue;
+      }
       this.swapBuffer.push(opt.swapBuffer || false);
       this.mode.push(opt.mode || "TRIANGLES");
     }
@@ -810,7 +815,9 @@ nWGL.pass = class {
   render() {
     for (let i = 0; i < this.call.length; ++i) {
       // execute callback function
-      this.call[i]();
+      this.call[i].f();
+
+      if(!this.call[i].p) continue;
 
       if (this.nWGL.activeProgram.uniforms["u_time"]) {
         this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
