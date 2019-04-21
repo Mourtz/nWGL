@@ -785,13 +785,19 @@ nWGL.pass = class {
     /** local references */
     this.nWGL = nWGL;
 
+    /** @member {boolean} */
     this.multiple = Array.isArray(opts);
+
     if (!this.multiple)
       opts = [opts];
 
     /** variables */
+
+    /** @member {function[]} */
     this.call = [];
+    /** @member {boolean[]} [opts.swapBuffer=false] - needsSwap */
     this.swapBuffer = [];
+    /** @member {string} [opts.mode="TRIANGLES"] - render mode */
     this.mode = [];
 
     for (const opt of opts) {
@@ -1036,10 +1042,10 @@ nWGL.main = class {
   /**
    * Adds a shader
    * @param {string} filepath - shader's filepath
-   * @param {boolean} isVert - is a Vertex Shader?
    * @param {string} name - shader's name?
+   * @param {boolean} [isVert = false] - is a Vertex Shader?
    */
-  addShader(filepath, isVert, name) {
+  addShader(filepath, name, isVert) {
     console.log("⮚ %cAdding (" + name + ") shader.....", "color:#00e6e6");
 
     let shader = new nWGL.shader(this.gl, {
