@@ -801,7 +801,7 @@ nWGL.pass = class {
     this.mode = [];
 
     for (const opt of opts) {
-      if(opt.call) this.call.push({"f": opt.call, "p": true});
+      if(opt.render) this.call.push({"f": opt.render, "p": true});
       else if(opt.compute) this.call.push({"f": opt.compute, "p": false});
       else {
         console.error("couldn't detect any kind of pass!");
