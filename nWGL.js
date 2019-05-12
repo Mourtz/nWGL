@@ -1229,6 +1229,12 @@ nWGL.main = class {
       this.mouse.x = e.clientX || e.pageX;
       this.mouse.y = e.clientY || e.pageY;
     }, false);
+    
+    this.swapBuffer = opts.swapBuffer;
+    if(this.swapBuffer){
+      this.addFrameBuffer({ "internalformat": "RGBA32F" }, "readBuffer");
+      this.addFrameBuffer({ "internalformat": "RGBA32F" }, "writeBuffer");
+    }
 
     console.log("Initialized sandbox No." + (++nWGL.__T_CLONES__));
   }
@@ -1575,22 +1581,31 @@ nWGL.main = class {
   draw(mode) {
     ++this.frame;
 
-    for (const pass of this.passes)
-      pass.render();
-
-    if (this.activeProgram.uniforms["u_time"]) {
-      this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
+    if(this.passes.length){
+      for (const pass of this.passes)
+        pass.render();    
+    } else {
+      if (this.activeProgram.uniforms["u_time"]) {
+        this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
+      }
+  
+      if (this.activeProgram.uniforms["u_mouse"]) {
+        this.setMouse();
+      }
+  
+      if (this.activeProgram.uniforms["u_frame"]) {
+        this.activeProgram.setUniform("u_frame", this.frame);
+      }
+  
+      this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
     }
 
-    if (this.activeProgram.uniforms["u_mouse"]) {
-      this.setMouse();
+    if(this.swapBuffer){
+      // swap buffers
+      let temp = this.framebuffers["readBuffer"];
+      this.framebuffers["readBuffer"] = this.framebuffers["writeBuffer"];
+      this.framebuffers["writeBuffer"] = temp;
     }
-
-    if (this.activeProgram.uniforms["u_frame"]) {
-      this.activeProgram.setUniform("u_frame", this.frame);
-    }
-
-    this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
   }
 
   //------------ Program Getter/Setter ------------
