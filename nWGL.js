@@ -1084,60 +1084,109 @@ nWGL.pass = class {
     /** local references */
     this.nWGL = nWGL;
 
-    /** @member {boolean} */
-    this.multiple = Array.isArray(opts);
-
-    if (!this.multiple)
-      opts = [opts];
-
     /** variables */
-
     /** @member {function[]} */
-    this.call = [];
+    this.call = null;
     /** @member {boolean[]} [opts.swapBuffer=false] - needsSwap */
-    this.swapBuffer = [];
+    this.swapBuffer = opts.swapBuffer || false;
     /** @member {string} [opts.mode="TRIANGLES"] - render mode */
-    this.mode = [];
-
-    for (const opt of opts) {
-      if(opt.render) this.call.push({"f": opt.render, "p": true});
-      else if(opt.compute) this.call.push({"f": opt.compute, "p": false});
-      else {
-        console.error("couldn't detect any kind of pass!");
-        continue;
-      }
-      this.swapBuffer.push(opt.swapBuffer || false);
-      this.mode.push(opt.mode || "TRIANGLES");
-    }
-  }
-
-  render() {
-    for (let i = 0; i < this.call.length; ++i) {
-      // execute callback function
-      this.call[i].f();
-
-      if(!this.call[i].p) continue;
-
-      if (this.nWGL.activeProgram.uniforms["u_time"]) {
-        this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
-      }
-
-      if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
-        this.nWGL.setMouse();
-      }
-
-      if (this.nWGL.activeProgram.uniforms["u_frame"]) {
-        this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
-      }
-
-      this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode[i] || "TRIANGLES"], 0, 6);
-    }
+    this.mode = opts.mode || "TRIANGLES";
   }
 
   remove(){
-    let pos = this.nWGL.passes.indexOf(this);
+    let pos = this.composer.passes.indexOf(this);
     if(pos !== -1)
-      delete this.nWGL.passes.splice(pos, 1);
+      delete this.composer.passes.splice(pos, 1);
+  }
+};
+
+/** nWGL renderPass */
+nWGL.renderPass = class extends nWGL.pass{
+  constructor(nWGL, opts){
+    super(nWGL, opts);
+    this.call = opts.render;
+  }
+
+  render() {
+    // execute callback function
+    this.call();
+
+    if (this.nWGL.activeProgram.uniforms["u_time"]) {
+      this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
+    }
+
+    if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
+      this.nWGL.setMouse();
+    }
+
+    if (this.nWGL.activeProgram.uniforms["u_frame"]) {
+      this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
+    }
+
+    this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, 6);
+  }
+}
+
+/** nWGL computePass */
+nWGL.computePass = class extends nWGL.pass{
+  constructor(nWGL, opts){
+    super(nWGL, opts);
+    this.call = opts.compute;
+  }
+
+  render() {
+    // execute callback function
+    this.call();
+  }
+}
+
+/**
+ * nWGL composer
+ */
+nWGL.composer = class {
+  constructor(nWGL){
+    /** local references */
+    this.nWGL = nWGL;
+
+    this.readBuffer = nWGL.readBuffer;
+    this.writeBuffer = nWGL.writeBuffer;
+
+    /** @member {nWGL.pass[]} */
+    this.passes = [];
+  }
+
+  /**
+   * Adds a pass
+   * @param {nWGL.pass | Function} [pass] - buffer's options
+   */
+  addPass(...pass) {
+    for(let i = 0; i < pass.length; ++i){
+      if(pass[i] instanceof nWGL.pass){
+        this.passes.push(pass[i]);
+      }
+      else {
+        if(!(pass[i] instanceof Object) || !(pass[i].compute || pass[i].render))
+          throw 'unknown pass type!';
+
+        this.passes.push(pass[i].compute ? new nWGL.computePass(this.nWGL, pass[i]) : new nWGL.renderPass(this.nWGL, pass[i]));
+      }
+    }
+  }
+
+  render(){
+    for (const pass of this.passes){
+      pass.render();
+
+      if(pass.swapBuffer){
+        let temp = readBuffer;
+        readBuffer = writeBuffer;
+        writeBuffer = temp;
+      }
+    }
+  }
+
+  get empty(){
+    return (this.passes.length === 0);
   }
 };
 
@@ -1207,8 +1256,8 @@ nWGL.main = class {
     this.activeProgram = null;
     /** @member {number} */
     this.frame = 0;
-    /** @member {nWGL.pass[]} */
-    this.passes = [];
+    /** @member {nWGL.composer} */
+    this.composer = new nWGL.composer(this);
 
     // vbo
     let quad_verts = new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0]); 
@@ -1331,21 +1380,7 @@ nWGL.main = class {
    * @param {nWGL.pass | Function[]} [opts] - buffer's options
    */
   addPass(pass) {
-    if(pass === undefined) return null;
-
-    if(
-      Array.isArray(pass) && 
-      pass.length > 0 &&
-      pass[0] instanceof Function
-    ){
-      pass = new nWGL.pass(this, pass);
-    } else if(!(pass instanceof nWGL.pass)){
-      return null;
-    }
-
-    this.passes.push(pass);
-
-    return pass;
+    this.composer.addPass(pass);
   }
 
   //---------------------------------------------
@@ -1401,7 +1436,10 @@ nWGL.main = class {
     if (Array.isArray(shaders))
       for (let i = 0; i < shaders.length; ++i)
         if (typeof shaders[i] == "string")
-          shaders[i] = this.shaders[shaders[i]];
+          if(this.shaders[shaders[i]])
+            shaders[i] = this.shaders[shaders[i]];
+          else
+            throw (shaders[i] + "doesnt exist!!!");
 
     let program = new nWGL.program(this, shaders);
     this.programs[name] = program;
@@ -1581,9 +1619,8 @@ nWGL.main = class {
   draw(mode) {
     ++this.frame;
 
-    if(this.passes.length){
-      for (const pass of this.passes)
-        pass.render();    
+    if(!this.composer.empty){
+      this.composer.render();    
     } else {
       if (this.activeProgram.uniforms["u_time"]) {
         this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
