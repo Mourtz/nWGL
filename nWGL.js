@@ -879,18 +879,54 @@ nWGL.buffer = class {
     /** @member {GLenum} */
     this.usage = opts.usage || gl.STATIC_DRAW;
 
-    if (opts.data) this.fillBuffer(opts.data);
+    if (opts.data) {
+      this.init_args(opts);
+      this.fillBuffer(opts);
+    }
+  }
+
+  init_args(opts){
+      let gl = this.nWGL.gl;
+
+      /** @member {GLuint} */
+      this.index = opts.index || 0;
+      /** @member {GLint} */
+      this.size = opts.size || 2;
+      /** @member {GLenum} */
+      this.type = gl[opts.type || "FLOAT"];
+      /** @member {GLboolean} */
+      this.normalized = opts.normalized || false;
+      /** @member {GLsizei} */
+      this.stride = opts.stride || 0;
+      /** @member {GLintptr} */
+      this.offset = opts.offset || 0;
+      /** @member {number} */
+      this.count = opts.data.length / (this.size || 2);
+
+      /** there's no point of keeping the data on the RAM */
+      // this.data = opts.data;
+
+      this.has_args = true;
   }
 
   /**
    * Store data in the buffer
    * @param {ArrayBuffer} [opts.data] - buffer's data
    */
-  fillBuffer(data) {
+  fillBuffer(opts) {
     let gl = this.nWGL.gl;
 
+    if(opts.init_args || !this.has_args) this.init_args(opts);
+
     gl.bindBuffer(this.target, this.buffer);
-    gl.bufferData(this.target, data, this.usage);
+    gl.bufferData(this.target, opts.data, this.usage);
+    
+    gl.enableVertexAttribArray(this.index);
+    gl.vertexAttribPointer(this.index, this.size, this.type, this.normalized, this.stride, this.offset);
+
+    if(opts.divisor){
+      gl.vertexAttribDivisor(this.index, opts.divisor);
+    }
   }
 
   /**
@@ -1107,7 +1143,7 @@ nWGL.renderPass = class extends nWGL.pass{
     this.call = opts.render;
   }
 
-  render() {
+  render(vert_count) {
     // execute callback function
     this.call();
 
@@ -1123,7 +1159,7 @@ nWGL.renderPass = class extends nWGL.pass{
       this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
     }
 
-    this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, 6);
+    this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, vert_count || 6);
   }
 }
 
@@ -1134,7 +1170,7 @@ nWGL.computePass = class extends nWGL.pass{
     this.call = opts.compute;
   }
 
-  render() {
+  render(vert_count) {
     // execute callback function
     this.call();
   }
@@ -1173,9 +1209,9 @@ nWGL.composer = class {
     }
   }
 
-  render(){
+  render(vert_count){
     for (const pass of this.passes){
-      pass.render();
+      pass.render(vert_count);
 
       if(pass.swapBuffer){
         let temp = readBuffer;
@@ -1259,13 +1295,11 @@ nWGL.main = class {
     /** @member {nWGL.composer} */
     this.composer = new nWGL.composer(this);
 
-    // vbo
-    let quad_verts = new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0]); 
-    this.addBuffer({ "data": quad_verts }, "quad_vbo");
-
-    gl.enableVertexAttribArray(0);
-    // this.buffers["quad_vbo"].bind(); // already bound
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    if(!opts.disable_quad_vbo){
+      // vbo
+      let quad_verts = new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0]); 
+      this.addBuffer({ "data": quad_verts, "index": 0, "size": 2 }, "quad_vbo");
+    }
 
     /** @member {object} - mouse position */
     this.mouse = {
@@ -1365,10 +1399,25 @@ nWGL.main = class {
    * @param {string} name - buffer's name
    */
   addBuffer(opts, name) {
+    console.log("⮚ %cAdding (" + name + ") buffer.....", "color:#85e600");
+
     let buffer = new nWGL.buffer(this, opts);
     this.buffers[name] = buffer;
 
     return buffer;
+  }
+
+  /**
+   * Deletes
+   * @param {string} name - buffer's name
+   */
+  deleteBuffer(name){
+    if(name in this.buffers){
+      console.log("⮚ %cDeleting (" + name + ") buffer.....", "color:#eb4034");
+
+      this.buffers[name].delete();
+      delete this.buffers[name];
+    }
   }
 
   //------------------------------------------
@@ -1616,11 +1665,11 @@ nWGL.main = class {
    * Render function
    * @param {string} [mode="TRIANGLES"] - render mode
    */
-  draw(mode) {
+  draw(mode, vertices) {
     ++this.frame;
 
     if(!this.composer.empty){
-      this.composer.render();    
+      this.composer.render(vertices);    
     } else {
       if (this.activeProgram.uniforms["u_time"]) {
         this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
@@ -1634,7 +1683,7 @@ nWGL.main = class {
         this.activeProgram.setUniform("u_frame", this.frame);
       }
   
-      this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, 6);
+      this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, vertices || 6);
     }
 
     if(this.swapBuffer){
