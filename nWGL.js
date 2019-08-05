@@ -42,6 +42,69 @@ nWGL.parseShader = function (filepath, callback) {
   return (callback) ? callback(string) : string;
 };
 
+nWGL.loadOBJ = function(filepath){
+  let lines = nWGL.getTextFromFile(filepath).split("\n");
+  
+  let object = class{
+    constructor(name, first_vertex, last_vertex ){
+      this.name = name;
+      this.first_vertex = first_vertex;
+      this.last_vertex = last_vertex;
+    }
+  };
+  
+  let objects = [];
+  // vertices / uv / normals
+  let faces = [[], [], []];
+  let vertices = [];
+  let normals = [];
+  let uv = [];
+
+  // let fill_object = false;
+  let first_index = 0;
+  for(const line of lines){
+    if(line.length === 0 || line[0] === '#')
+      continue;
+
+    let temp = line.slice(1).trim().split(" ");
+
+    if(line[0] === 'v'){
+      for(const vertex of temp){
+        vertices.push(vertex);
+      }
+    } else if(line[0] === 'vn'){
+      for(const normal of temp){
+        normals.push(normal);
+      }
+    } else if(line[0] === 'f'){
+      for(const face of temp){
+          let val = face.split("/");
+
+          for(let i = 0; i < val.length; ++i){
+            // if its not empty
+            if(val[i].length > 0)
+              faces[i].push(val[i]);
+          }
+      }
+    }
+    /*
+    @ToDo
+    else if(line[0] === 'o'){
+      objects.push(new object(line.slice(1).trim(), first_index, vertices.length - 1));
+      first_index = vertices.length;
+    }
+    */
+  }
+
+  return {
+    // "objects": objects,
+    "faces": faces,
+    "vertices": vertices,
+    "normals": normals,
+    "uv": uv
+  };
+}
+
 // taken from https://webgl2fundamentals.org/
 nWGL.helper = {
   /**
@@ -126,6 +189,8 @@ nWGL.helper = {
 
     return dst;
   },
+
+//-------------------------------------------------------
 
   /**
    * Mutliply by translation matrix.
@@ -432,6 +497,8 @@ nWGL.helper = {
 
     return dst;
   },
+
+//-------------------------------------------------------
 
   radToDeg: function(r) {
     return r * 180 / Math.PI;
@@ -978,8 +1045,8 @@ nWGL.buffer = class {
   /**
    * @param {nWGL.main} nWGL - nWGL reference
    * @param {object} [opts] - buffer's options
-   * @param {GLenum} [opts.target = gl.ARRAY_BUFFER] - buffer's binding point
-   * @param {GLenum} [opts.usage = gl.STATIC_DRAW] - usage pattern of the data store
+   * @param {string} [opts.target = "ARRAY_BUFFER"] - buffer's binding point
+   * @param {string} [opts.usage = "STATIC_DRAW"] - usage pattern of the data store
    * @param {ArrayBuffer} [opts.data] - buffer's data
    */
   constructor(nWGL, opts) {
@@ -993,9 +1060,9 @@ nWGL.buffer = class {
     /** @member {WebGLBuffer} */
     this.buffer = gl.createBuffer();
     /** @member {GLenum} */
-    this.target = opts.target || gl.ARRAY_BUFFER;
+    this.target = gl[opts.target || "ARRAY_BUFFER"];
     /** @member {GLenum} */
-    this.usage = opts.usage || gl.STATIC_DRAW;
+    this.usage = gl[opts.usage || "STATIC_DRAW"];
 
     if (opts.data) {
       this.init_args(opts);
@@ -1785,7 +1852,7 @@ nWGL.main = class {
    * @param {number} [vertices=6] - total vertices
    * @param {number} [instances] - instances of the mesh
    */
-  draw(mode, vertices, instances) {
+  draw(mode, vertices, elements, instances) {
     ++this.frame;
 
     if(!this.composer.empty){
@@ -1803,10 +1870,17 @@ nWGL.main = class {
         this.activeProgram.setUniform("u_frame", this.frame);
       }
   
-      if(instances)
-        this.gl.drawArraysInstanced(this.gl[mode || "TRIANGLES"], 0, vertices || 6, instances);
-      else
-        this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, vertices || 6);
+      if(elements){
+        if(instances)
+          this.gl.drawElementsInstanced(this.gl[mode || "TRIANGLES"], vertices || 6, this.gl.UNSIGNED_SHORT, 0, instances);
+        else
+          this.gl.drawElements(this.gl[mode || "TRIANGLES"], vertices || 6, this.gl.UNSIGNED_SHORT, 0);
+      } else {
+        if(instances)
+          this.gl.drawArraysInstanced(this.gl[mode || "TRIANGLES"], 0, vertices || 6, instances);
+        else
+          this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, vertices || 6);
+      }
     }
 
     if(this.swapBuffer){
