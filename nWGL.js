@@ -45,39 +45,39 @@ nWGL.parseShader = function (filepath, callback) {
 nWGL.loadOBJ = function(filepath){
   let lines = nWGL.getTextFromFile(filepath).split("\n");
   
-  let object = class{
-    constructor(name, first_vertex, last_vertex ){
-      this.name = name;
-      this.first_vertex = first_vertex;
-      this.last_vertex = last_vertex;
-    }
-  };
-  
-  let objects = [];
   // vertices / uv / normals
   let faces = [[], [], []];
-  let vertices = [];
-  let normals = [];
-  let uv = [];
+  // w padding
+  let vertices = [0,0,0];
+  let normals = [0,0,0];
+  let uvs = [0,0,0];
 
-  // let fill_object = false;
-  let first_index = 0;
+  
   for(const line of lines){
-    if(line.length === 0 || line[0] === '#')
+    // skip comments and empty lines
+    if(line.length === 0 || line[0] === '#'){
       continue;
+    }
 
-    let temp = line.slice(1).trim().split(" ");
+    let atts = line.slice(2).trim().split(" ");
 
     if(line[0] === 'v'){
-      for(const vertex of temp){
-        vertices.push(vertex);
-      }
-    } else if(line[0] === 'vn'){
-      for(const normal of temp){
-        normals.push(normal);
+      for(const att of atts){
+        if(line[1] === 'n'){
+          normals.push(att);
+        } 
+        else if(line[1] === 't'){
+          uvs.push(att);
+        } 
+        else if(line[1] === ' '){
+          vertices.push(att);
+        }
       }
     } else if(line[0] === 'f'){
-      for(const face of temp){
+      if(atts.length === 4){
+        console.error("there's no support for quads yet!");
+      } else {
+        for(const face of atts){
           let val = face.split("/");
 
           for(let i = 0; i < val.length; ++i){
@@ -85,23 +85,37 @@ nWGL.loadOBJ = function(filepath){
             if(val[i].length > 0)
               faces[i].push(val[i]);
           }
+        }
       }
     }
-    /*
-    @ToDo
-    else if(line[0] === 'o'){
-      objects.push(new object(line.slice(1).trim(), first_index, vertices.length - 1));
-      first_index = vertices.length;
+  }
+
+  faces[0] = new Uint16Array(faces[0]);
+  faces[1] = new Uint16Array(faces[1]);
+  faces[2] = new Uint16Array(faces[2]);
+
+  vertices = new Float32Array(vertices);
+  normals = new Float32Array(normals);
+  uvs = new Float32Array(uvs);
+
+  // if it has indices
+  if(faces[0].length > 0){
+    let new_normals = new Float32Array(vertices.length);
+    for(let i = 0; i < faces[0].length; ++i){
+      const vI = faces[0][i]*3;
+      const nI = faces[2][i]*3;
+      new_normals[vI+0] = normals[nI+0];
+      new_normals[vI+1] = normals[nI+1];
+      new_normals[vI+2] = normals[nI+2];
     }
-    */
+    normals = new_normals;
   }
 
   return {
-    // "objects": objects,
     "faces": faces,
     "vertices": vertices,
     "normals": normals,
-    "uv": uv
+    "uv": uvs
   };
 }
 
@@ -1065,53 +1079,57 @@ nWGL.buffer = class {
     this.usage = gl[opts.usage || "STATIC_DRAW"];
 
     if (opts.data) {
-      this.init_args(opts);
-      this.fillBuffer(opts);
+      this.data(opts.data);
     }
-  }
-
-  init_args(opts){
-    let gl = this.nWGL.gl;
-
-    /** @member {GLuint} */
-    this.index = opts.index || 0;
-    /** @member {GLint} */
-    this.size = opts.size || 2;
-    /** @member {GLenum} */
-    this.type = gl[opts.type || "FLOAT"];
-    /** @member {GLboolean} */
-    this.normalized = opts.normalized || false;
-    /** @member {GLsizei} */
-    this.stride = opts.stride || 0;
-    /** @member {GLintptr} */
-    this.offset = opts.offset || 0;
-    /** @member {number} */
-    this.count = opts.data.length / (this.size || 2);
-
-    /** there's no point of keeping the data on the RAM */
-    // this.data = opts.data;
-
-    this.has_args = true;
   }
 
   /**
    * Store data in the buffer
-   * @param {ArrayBuffer} [opts.data] - buffer's data
+   * @param {number} opts.index - attribute's index number
+   * @param {number} [opts.size = this.size || 2]
+   * @param {GLenum} [opts.type = gl[this.type] || gl["FLOAT"]]
+   * @param {boolean} [opts.normalized = this.normalized || false]
+   * @param {number} [opts.stride = this.stride || 0]
+   * @param {number} [opts.offset = this.offset || 0]
+   * @param {boolean} [opts.divisor]
    */
-  fillBuffer(opts) {
+  enableVertexAttribArray(opts) {
     let gl = this.nWGL.gl;
 
-    if(opts.init_args || !this.has_args) this.init_args(opts);
+    if(opts.index === undefined) console.error("an index has to be provided!");
 
-    gl.bindBuffer(this.target, this.buffer);
-    gl.bufferData(this.target, opts.data, this.usage);
+    /** @member {GLint} */
+    this.size = opts.size || this.size || 2;
+    /** @member {GLenum} */
+    this.type = gl[opts.type] || gl[this.type] || gl["FLOAT"];
+    /** @member {GLboolean} */
+    this.normalized = opts.normalized || this.normalized || false;
+    /** @member {GLsizei} */
+    this.stride = opts.stride || this.stride || 0;
+    /** @member {GLintptr} */
+    this.offset = opts.offset || this.offset || 0;
     
-    gl.enableVertexAttribArray(this.index);
-    gl.vertexAttribPointer(this.index, this.size, this.type, this.normalized, this.stride, this.offset);
 
+    gl.enableVertexAttribArray(opts.index);
+    this.bind();
+    gl.vertexAttribPointer(opts.index, this.size, this.type, this.normalized, this.stride, this.offset);
     if(opts.divisor){
-      gl.vertexAttribDivisor(this.index, opts.divisor);
+      gl.vertexAttribDivisor(opts.index, opts.divisor);
     }
+  }
+
+  /**
+   * 
+   * @param {ArrayBuffer} [data]  - buffer's data
+   * @param {string} [target] - buffer's binding point
+   * @param {string} [usage] - usage pattern of the data store
+   */
+  data(data, target, usage){
+    this.target = this.nWGL.gl[target] || this.target;
+    this.usage = this.nWGL.gl[usage] || this.usage;
+
+    this.nWGL.gl.bindBuffer(this.target, this.buffer);
+    this.nWGL.gl.bufferData(this.target, data, this.usage);
   }
 
   /**
