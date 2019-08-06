@@ -1465,6 +1465,18 @@ nWGL.main = class {
     /** @member {WebGL2RenderingContext} */
     this.gl = gl;
 
+    // turn on depth testing
+    if(opts.enableDepthTest || opts.depthFunc){
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl[opts.depthFunc || "LESS"]); 
+    }
+
+    // tell webgl to cull faces
+    if(opts.enableCulling || opts.cullFace){
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl[opts.cullFace || "BACK"]);
+    }
+
     // WebGL2 extensions
     this.FP_SUPP = false; 
     if (opts.enableFloatEXT) {
