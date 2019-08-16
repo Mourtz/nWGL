@@ -1442,6 +1442,14 @@ nWGL.main = class {
    * @param {number} [opts.width = 1024] - canva's width.
    * @param {number} [opts.height = 512] - canva's height.
    * @param {HTMLElement} [opts.el = document.body] - element to append the canvas to.
+   * @param {boolean} [opts.enableFloatEXT] - enable FP32 extensions
+   * @param {boolean} [opts.disable_quad_vbo] - disable default quad vbo
+   * @param {boolean} [opts.enableDepthTest] - enable depth testing
+   * @param {string} [opts.depthFunc = "LESS"] - depth function
+   * @param {boolean} [opts.enableCulling] - enable face culling
+   * @param {string} [opts.cullFace = "BACK"] - culling mode
+   * @param {boolean} [opts.autoClear]
+   * @param {[number]} [opts.clColor] - clear color
    */
   constructor(opts) {
     opts = opts || {};
@@ -1476,6 +1484,9 @@ nWGL.main = class {
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl[opts.cullFace || "BACK"]);
     }
+
+    this.autoClear = opts.autoClear || false;
+    this.clColor = opts.clColor;
 
     // WebGL2 extensions
     this.FP_SUPP = false; 
@@ -1530,8 +1541,8 @@ nWGL.main = class {
     
     this.swapBuffer = opts.swapBuffer;
     if(this.swapBuffer){
-      this.addFrameBuffer({ "internalformat": "RGBA32F" }, "readBuffer");
-      this.addFrameBuffer({ "internalformat": "RGBA32F" }, "writeBuffer");
+      this.addFrameBuffer({ "internalformat": (swapBuffer || "RGBA32F") }, "readBuffer");
+      this.addFrameBuffer({ "internalformat": (swapBuffer || "RGBA32F") }, "writeBuffer");
     }
 
     console.log("Initialized sandbox No." + (++nWGL.__T_CLONES__));
@@ -1885,6 +1896,13 @@ nWGL.main = class {
   draw(mode, vertices, elements, instances) {
     ++this.frame;
 
+    if(this.autoClear){
+      if(this.clColor) 
+        this.clearColor();
+      else
+        this.clear();
+    }
+
     if(!this.composer.empty){
       this.composer.render(vertices);    
     } else {
@@ -1919,6 +1937,21 @@ nWGL.main = class {
       this.framebuffers["readBuffer"] = this.framebuffers["writeBuffer"];
       this.framebuffers["writeBuffer"] = temp;
     }
+  }
+
+  /**
+   * @param {GLbitfield} [mask=(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)]
+   */
+  clear(mask){
+    this.gl.clear(mask || (this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT));
+  }
+
+  /**
+   * @param  {...any} [rgba=this.clColor] 
+   */
+  clearColor(...rgba){
+    rgba = (rgba[0] && rgba) || this.clColor || [];
+    this.gl.clearColor(rgba[0], rgba[1], rgba[2], rgba[3]);
   }
 
   //------------ Program Getter/Setter ------------
