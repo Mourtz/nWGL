@@ -1672,7 +1672,7 @@ nWGL.main = class {
     console.log("⮚ %cAdding (" + name + ") shader.....", "color:#00e6e6");
 
     let shader = new nWGL.shader(this.gl, {
-      "isVert": isVert,
+      "isVert": isVert || false,
       "string": nWGL.parseShader(filepath)
     });
     this.shaders[name] = shader;
