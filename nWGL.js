@@ -207,6 +207,67 @@ nWGL.helper = {
 //-------------------------------------------------------
 
   /**
+   * subtracts 2 vectors3s
+   * @param {Vector3} a a
+   * @param {Vector3} b b
+   * @param {Vector3} dst optional vector3 to store result
+   * @return {Vector3} dst or new Vector3 if not provided
+   */
+  subtractVectors: function(a, b, dst) {
+    dst = dst || new Float32Array(3);
+    dst[0] = a[0] - b[0];
+    dst[1] = a[1] - b[1];
+    dst[2] = a[2] - b[2];
+    return dst;
+  },
+
+  /**
+   * Computes the dot product of two vectors; assumes both vectors have
+   * three entries.
+   * @param {Vector3} a Operand vector.
+   * @param {Vector3} b Operand vector.
+   * @return {number} dot product
+   */
+  dot: function(a, b) {
+    return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
+  },
+
+  /**
+   * normalizes a vector.
+   * @param {Vector3} v vector to normalzie
+   * @param {Vector3} dst optional vector3 to store result
+   * @return {Vector3} dst or new Vector3 if not provided
+   */
+  normalize: function(v, dst) {
+    dst = dst || new Float32Array(3);
+    const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    // make sure we don't divide by 0.
+    if (length > 0.00001) {
+      dst[0] = v[0] / length;
+      dst[1] = v[1] / length;
+      dst[2] = v[2] / length;
+    }
+    return dst;
+  },
+
+  /**
+   * Computes the cross product of 2 vectors3s
+   * @param {Vector3} a a
+   * @param {Vector3} b b
+   * @param {Vector3} dst optional vector3 to store result
+   * @return {Vector3} dst or new Vector3 if not provided
+   */
+  cross: function(a, b, dst) {
+    dst = dst || new Float32Array(3);
+    dst[0] = a[1] * b[2] - a[2] * b[1];
+    dst[1] = a[2] * b[0] - a[0] * b[2];
+    dst[2] = a[0] * b[1] - a[1] * b[0];
+    return dst;
+  },
+
+//-------------------------------------------------------
+
+  /**
    * Mutliply by translation matrix.
    * @param {Matrix4} m matrix to multiply
    * @param {number} tx x translation.
@@ -473,6 +534,92 @@ nWGL.helper = {
     return dst;
   },
 
+  ///////////////////////////////////////////////////////////////////////////////
+  // convert Euler angles(x,y,z) to axes(left, up, forward)
+  // Each column of the rotation matrix represents left, up and forward axis.
+  // The order of rotation is Roll->Yaw->Pitch (Rx*Ry*Rz)
+  // Rx: rotation about X-axis, pitch
+  // Ry: rotation about Y-axis, yaw(heading)
+  // Rz: rotation about Z-axis, roll
+  //    Rx           Ry          Rz
+  // |1  0   0| | Cy  0 Sy| |Cz -Sz 0|   | CyCz        -CySz         Sy  |
+  // |0 Cx -Sx|*|  0  1  0|*|Sz  Cz 0| = | SxSyCz+CxSz -SxSySz+CxCz -SxCy|
+  // |0 Sx  Cx| |-Sy  0 Cy| | 0   0 1|   |-CxSyCz+SxSz  CxSySz+SxCz  CxCy|
+  ///////////////////////////////////////////////////////////////////////////////
+  anglesToAxes: function(angles, left, up, forward)
+  {
+      let DEG2RAD = 3.141593 / 180;
+      let sx, sy, sz, cx, cy, cz, theta;
+
+      // rotation angle about X-axis (pitch)
+      theta = angles[0] * DEG2RAD;
+      sx = Math.sin(theta);
+      cx = Math.cos(theta);
+
+      // rotation angle about Y-axis (yaw)
+      theta = angles[1] * DEG2RAD;
+      sy = Math.sin(theta);
+      cy = Math.cos(theta);
+
+      // rotation angle about Z-axis (roll)
+      theta = angles[2] * DEG2RAD;
+      sz = Math.sin(theta);
+      cz = Math.cos(theta);
+
+      // determine left axis
+      left[0] = cy*cz;
+      left[1] = sx*sy*cz + cx*sz;
+      left[2] = -cx*sy*cz + sx*sz;
+
+      // determine up axis
+      up[0] = -cy*sz;
+      up[1] = -sx*sy*sz + cx*cz;
+      up[2] = cx*sy*sz + sx*cz;
+
+      // determine forward axis
+      forward[0] = sy;
+      forward[1] = -sx*cy;
+      forward[2] = cx*cy;
+  },
+
+  /**
+   * Creates a lookAt matrix.
+   * This is a world matrix for a camera. In other words it will transform
+   * from the origin to a place and orientation in the world. For a view
+   * matrix take the inverse of this.
+   * @param {Vector3} cameraPosition position of the camera
+   * @param {Vector3} target position of the target
+   * @param {Vector3} up direction
+   * @param {Matrix4} [dst] optional matrix to store result
+   * @return {Matrix4} dst or a new matrix if none provided
+   */
+  lookAt: function(cameraPosition, target, up, dst) {
+    dst = dst || new Float32Array(16);
+    const zAxis = this.normalize(
+      this.subtractVectors(target, cameraPosition));
+    const xAxis = this.normalize(this.cross(up, zAxis));
+    const yAxis = this.cross(zAxis, xAxis);
+
+    dst[ 0] = xAxis[0];
+    dst[ 1] = xAxis[1];
+    dst[ 2] = xAxis[2];
+    dst[ 3] = 0;
+    dst[ 4] = yAxis[0];
+    dst[ 5] = yAxis[1];
+    dst[ 6] = yAxis[2];
+    dst[ 7] = 0;
+    dst[ 8] = zAxis[0];
+    dst[ 9] = zAxis[1];
+    dst[10] = zAxis[2];
+    dst[11] = 0;
+    dst[12] = cameraPosition[0];
+    dst[13] = cameraPosition[1];
+    dst[14] = cameraPosition[2];
+    dst[15] = 1;
+
+    return dst;
+  },
+
 //-------------------------------------------------------
 
   /**
@@ -520,8 +667,101 @@ nWGL.helper = {
   
   degToRad: function(d) {
     return d * Math.PI / 180;
-  }
+  },
 
+//-------------------------------------------------------
+
+  /**
+   * Computes the inverse of a matrix.
+   * @param {Matrix4} m matrix to compute inverse of
+   * @param {Matrix4} [dst] optional matrix to store result
+   * @return {Matrix4} dst or a new matrix if none provided
+   */
+  inverse: function(m, dst) {
+    dst = dst || new Float32Array(16);
+    const m00 = m[0 * 4 + 0];
+    const m01 = m[0 * 4 + 1];
+    const m02 = m[0 * 4 + 2];
+    const m03 = m[0 * 4 + 3];
+    const m10 = m[1 * 4 + 0];
+    const m11 = m[1 * 4 + 1];
+    const m12 = m[1 * 4 + 2];
+    const m13 = m[1 * 4 + 3];
+    const m20 = m[2 * 4 + 0];
+    const m21 = m[2 * 4 + 1];
+    const m22 = m[2 * 4 + 2];
+    const m23 = m[2 * 4 + 3];
+    const m30 = m[3 * 4 + 0];
+    const m31 = m[3 * 4 + 1];
+    const m32 = m[3 * 4 + 2];
+    const m33 = m[3 * 4 + 3];
+    const tmp_0  = m22 * m33;
+    const tmp_1  = m32 * m23;
+    const tmp_2  = m12 * m33;
+    const tmp_3  = m32 * m13;
+    const tmp_4  = m12 * m23;
+    const tmp_5  = m22 * m13;
+    const tmp_6  = m02 * m33;
+    const tmp_7  = m32 * m03;
+    const tmp_8  = m02 * m23;
+    const tmp_9  = m22 * m03;
+    const tmp_10 = m02 * m13;
+    const tmp_11 = m12 * m03;
+    const tmp_12 = m20 * m31;
+    const tmp_13 = m30 * m21;
+    const tmp_14 = m10 * m31;
+    const tmp_15 = m30 * m11;
+    const tmp_16 = m10 * m21;
+    const tmp_17 = m20 * m11;
+    const tmp_18 = m00 * m31;
+    const tmp_19 = m30 * m01;
+    const tmp_20 = m00 * m21;
+    const tmp_21 = m20 * m01;
+    const tmp_22 = m00 * m11;
+    const tmp_23 = m10 * m01;
+
+    const t0 = (tmp_0 * m11 + tmp_3 * m21 + tmp_4 * m31) -
+        (tmp_1 * m11 + tmp_2 * m21 + tmp_5 * m31);
+    const t1 = (tmp_1 * m01 + tmp_6 * m21 + tmp_9 * m31) -
+        (tmp_0 * m01 + tmp_7 * m21 + tmp_8 * m31);
+    const t2 = (tmp_2 * m01 + tmp_7 * m11 + tmp_10 * m31) -
+        (tmp_3 * m01 + tmp_6 * m11 + tmp_11 * m31);
+    const t3 = (tmp_5 * m01 + tmp_8 * m11 + tmp_11 * m21) -
+        (tmp_4 * m01 + tmp_9 * m11 + tmp_10 * m21);
+
+    const d = 1.0 / (m00 * t0 + m10 * t1 + m20 * t2 + m30 * t3);
+
+    dst[0] = d * t0;
+    dst[1] = d * t1;
+    dst[2] = d * t2;
+    dst[3] = d * t3;
+    dst[4] = d * ((tmp_1 * m10 + tmp_2 * m20 + tmp_5 * m30) -
+          (tmp_0 * m10 + tmp_3 * m20 + tmp_4 * m30));
+    dst[5] = d * ((tmp_0 * m00 + tmp_7 * m20 + tmp_8 * m30) -
+          (tmp_1 * m00 + tmp_6 * m20 + tmp_9 * m30));
+    dst[6] = d * ((tmp_3 * m00 + tmp_6 * m10 + tmp_11 * m30) -
+          (tmp_2 * m00 + tmp_7 * m10 + tmp_10 * m30));
+    dst[7] = d * ((tmp_4 * m00 + tmp_9 * m10 + tmp_10 * m20) -
+          (tmp_5 * m00 + tmp_8 * m10 + tmp_11 * m20));
+    dst[8] = d * ((tmp_12 * m13 + tmp_15 * m23 + tmp_16 * m33) -
+          (tmp_13 * m13 + tmp_14 * m23 + tmp_17 * m33));
+    dst[9] = d * ((tmp_13 * m03 + tmp_18 * m23 + tmp_21 * m33) -
+          (tmp_12 * m03 + tmp_19 * m23 + tmp_20 * m33));
+    dst[10] = d * ((tmp_14 * m03 + tmp_19 * m13 + tmp_22 * m33) -
+          (tmp_15 * m03 + tmp_18 * m13 + tmp_23 * m33));
+    dst[11] = d * ((tmp_17 * m03 + tmp_20 * m13 + tmp_23 * m23) -
+          (tmp_16 * m03 + tmp_21 * m13 + tmp_22 * m23));
+    dst[12] = d * ((tmp_14 * m22 + tmp_17 * m32 + tmp_13 * m12) -
+          (tmp_16 * m32 + tmp_12 * m12 + tmp_15 * m22));
+    dst[13] = d * ((tmp_20 * m32 + tmp_12 * m02 + tmp_19 * m22) -
+          (tmp_18 * m22 + tmp_21 * m32 + tmp_13 * m02));
+    dst[14] = d * ((tmp_18 * m12 + tmp_23 * m32 + tmp_15 * m02) -
+          (tmp_22 * m32 + tmp_14 * m02 + tmp_19 * m12));
+    dst[15] = d * ((tmp_22 * m22 + tmp_16 * m02 + tmp_21 * m12) -
+          (tmp_20 * m12 + tmp_23 * m22 + tmp_17 * m02));
+
+    return dst;
+  }
 };
 
 //-----------------------------------------------------------------------
