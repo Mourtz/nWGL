@@ -6,6 +6,10 @@ Simple WebGL2 boilerplate. It's supposed to save me some time every time I start
 > WIP (camera controls have to be improved and pushed to this repo) \
 > [obj-viewer](https://mourtz.github.io/nWGL-examples/obj-viewer/index.html)
 
+[flattened-smallpt](https://mourtz.github.io/flattened-smallpt/smallpt)
+([code](https://github.com/Mourtz/flattened-smallpt)) \
+! Draft extensions have to be enabled !
+
 [smallpt](https://mourtz.github.io/nWGL-examples/smallpt/smallpt.html) 
 ([code](https://github.com/Mourtz/nWGL-examples/tree/master/smallpt))
 
