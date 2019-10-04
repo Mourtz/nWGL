@@ -3,8 +3,8 @@
 Simple WebGL2 boilerplate. It's supposed to save me some time every time I start a new project.
 
 ## Demos
-> WIP (camera controls have to be improved and pushed to this repo) \
-> [obj-viewer](https://mourtz.github.io/nWGL-examples/obj-viewer/index.html)
+[obj-viewer](https://mourtz.github.io/nWGL-examples/obj-viewer/index.html)
+([code](https://github.com/Mourtz/nWGL-examples/tree/master/obj-viewer))
 
 [flattened-smallpt](https://mourtz.github.io/flattened-smallpt/smallpt)
 ([code](https://github.com/Mourtz/flattened-smallpt)) \
