@@ -591,7 +591,6 @@ nWGL.helper = {
    * @param {Vector3} target position of the target
    * @param {Vector3} up direction
    * @param {Matrix4} [dst] optional matrix to store result
-   * @return {Matrix4} dst or a new matrix if none provided
    */
   lookAt: function(cameraPosition, target, up) {
     const zAxis = this.normalize(
@@ -1654,6 +1653,90 @@ nWGL.composer = class {
 
   get empty(){
     return (this.passes.length === 0);
+  }
+};
+
+nWGL.camera = class {
+  constructor(main, opts){
+    opts = opts || {};
+
+    // pitch, yaw, roll
+    this.rotation = [0, 0, 0];
+    this.position = opts.position || [0, 0, 5];
+    this.up = opts.up || [0, 1, 0];
+
+    this.focusPoint = opts.focusPoint || [this.position[0], this.position[1], this.position[2]-1];
+    this.UpdateView();
+      // this.view_matrix = nWGL.helper.lookAt(this.position, this.focusPoint, this.up);
+    
+    this.fieldOfViewRadians = nWGL.helper.degToRad(60);
+    this.aspect = main.gl.canvas.clientWidth / main.gl.canvas.clientHeight;
+    this.zNear = 0.001;
+    this.zFar = 500;
+    this.projection_matrix = nWGL.helper.perspective(this.fieldOfViewRadians, this.aspect, this.zNear, this.zFar);
+    this.projection_translation = [0, 0, 0];
+  }
+
+  UpdateView(){
+    const dot = nWGL.helper.dot;
+    const cross = nWGL.helper.cross;
+    const normalize = nWGL.helper.normalize;
+    const subtractVectors = nWGL.helper.subtractVectors;
+
+    // LookAt
+    if(false){
+      this.zAxis = normalize(subtractVectors(this.position, this.focusPoint));
+      this.xAxis = normalize(cross(this.up, this.zAxis));
+      this.yAxis = cross(this.zAxis, this.xAxis);
+    } 
+    // FPS camera
+    else {
+      let cosPitch = Math.cos(this.rotation[0]);
+      let sinPitch = Math.sin(this.rotation[0]);
+      let cosYaw = Math.cos(this.rotation[1]);
+      let sinYaw = Math.sin(this.rotation[1]);
+
+      this.xAxis = [ cosYaw, 0, -sinYaw ];
+      this.yAxis = [ sinYaw * sinPitch, cosPitch, cosYaw * sinPitch ];
+      this.zAxis = [ sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw ];
+    }
+
+    this.view_matrix = new Float32Array([
+      this.xAxis[0],  this.yAxis[0],  this.zAxis[0], 0,
+      this.xAxis[1],  this.yAxis[1],  this.zAxis[1], 0,
+      this.xAxis[2],  this.yAxis[2],  this.zAxis[2], 0,
+      -dot(this.position, this.xAxis), -dot(this.position, this.yAxis), -dot(this.position, this.zAxis), 1
+    ]);
+  }
+
+  pan(dx, dy){
+    this.position[0] += this.xAxis[0]*dx+this.yAxis[0]*dy; 
+    this.position[1] += this.xAxis[1]*dx+this.yAxis[1]*dy; 
+    this.position[2] += this.xAxis[2]*dx+this.yAxis[2]*dy;
+    this.UpdateView();
+  }
+
+  moveForward(dz){
+    this.position[0] += this.zAxis[0]*dz; 
+    this.position[1] += this.zAxis[1]*dz; 
+    this.position[2] += this.zAxis[2]*dz;
+    this.UpdateView();
+  }
+
+  rotateLocalX(rad){
+    this.rotation[0] += rad;
+    this.UpdateView();
+  }
+
+  rotateLocalY(rad){
+    this.rotation[1] += rad;
+    this.UpdateView();
+  }
+
+  rotateLocalXY(radX, radY){
+    this.rotation[0] += radX;
+    this.rotation[1] += radY;
+    this.UpdateView();
   }
 };
 
