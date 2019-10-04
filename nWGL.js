@@ -593,31 +593,19 @@ nWGL.helper = {
    * @param {Matrix4} [dst] optional matrix to store result
    * @return {Matrix4} dst or a new matrix if none provided
    */
-  lookAt: function(cameraPosition, target, up, dst) {
-    dst = dst || new Float32Array(16);
+  lookAt: function(cameraPosition, target, up) {
     const zAxis = this.normalize(
-      this.subtractVectors(target, cameraPosition));
+      this.subtractVectors(cameraPosition, target));
     const xAxis = this.normalize(this.cross(up, zAxis));
     const yAxis = this.cross(zAxis, xAxis);
 
-    dst[ 0] = xAxis[0];
-    dst[ 1] = xAxis[1];
-    dst[ 2] = xAxis[2];
-    dst[ 3] = 0;
-    dst[ 4] = yAxis[0];
-    dst[ 5] = yAxis[1];
-    dst[ 6] = yAxis[2];
-    dst[ 7] = 0;
-    dst[ 8] = zAxis[0];
-    dst[ 9] = zAxis[1];
-    dst[10] = zAxis[2];
-    dst[11] = 0;
-    dst[12] = cameraPosition[0];
-    dst[13] = cameraPosition[1];
-    dst[14] = cameraPosition[2];
-    dst[15] = 1;
-
-    return dst;
+    const dot = this.dot;
+    return new Float32Array([
+      xAxis[0],  yAxis[0],  zAxis[0], 0,
+      xAxis[1],  yAxis[1],  zAxis[1], 0,
+      xAxis[2],  yAxis[2],  zAxis[2], 0,
+      -dot(cameraPosition, xAxis), -dot(cameraPosition, yAxis), -dot(cameraPosition, zAxis), 1
+    ]);
   },
 
 //-------------------------------------------------------
