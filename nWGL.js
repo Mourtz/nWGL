@@ -1834,8 +1834,10 @@ nWGL.main = class {
 
     if(!opts.disable_quad_vbo){
       // vbo
-      let quad_verts = new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0]); 
-      this.addBuffer({ "data": quad_verts, "index": 0, "size": 2 }, "quad_vbo");
+      this.addBuffer({ 
+        "data": new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0]),
+        "index": 0, "size": 2 
+      }, "quad_vbo").enableVertexAttribArray({"index": 0, "size": 2});
     }
 
     /** @member {object} - mouse position */
@@ -2202,10 +2204,14 @@ nWGL.main = class {
    * Render function
    * @param {string} [mode="TRIANGLES"] - render mode
    * @param {number} [vertices=6] - total vertices
+   * @param {boolean} [elements=false] - drawElements?
    * @param {number} [instances] - instances of the mesh
    */
   draw(mode, vertices, elements, instances) {
     ++this.frame;
+
+    mode = this.gl[mode || "TRIANGLES"];
+    vertices = vertices || 6;
 
     if(this.autoClear){
       if(this.clColor) 
@@ -2231,14 +2237,14 @@ nWGL.main = class {
   
       if(elements){
         if(instances)
-          this.gl.drawElementsInstanced(this.gl[mode || "TRIANGLES"], vertices || 6, this.gl.UNSIGNED_SHORT, 0, instances);
+          this.gl.drawElementsInstanced(mode, vertices, this.gl.UNSIGNED_SHORT, 0, instances);
         else
-          this.gl.drawElements(this.gl[mode || "TRIANGLES"], vertices || 6, this.gl.UNSIGNED_SHORT, 0);
+          this.gl.drawElements(mode, vertices, this.gl.UNSIGNED_SHORT, 0);
       } else {
         if(instances)
-          this.gl.drawArraysInstanced(this.gl[mode || "TRIANGLES"], 0, vertices || 6, instances);
+          this.gl.drawArraysInstanced(mode, 0, vertices, instances);
         else
-          this.gl.drawArrays(this.gl[mode || "TRIANGLES"], 0, vertices || 6);
+          this.gl.drawArrays(mode, 0, vertices);
       }
     }
 
