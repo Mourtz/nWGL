@@ -775,6 +775,8 @@ nWGL.texture = class {
 
     let gl = nWGL.gl;
 
+    this.fullscreen = !opts.width && !opts.height && !opts.url; 
+
     /** @member {number} - texture's width */
     this.width = undefined;
     /** @member {number} - texture's height */
@@ -916,6 +918,24 @@ nWGL.texture = class {
       // there's no need to store pixel data on the host side
       this.createTexture(opts.data || new this.dataType(this.width * this.height * this.colorChannels));
     }
+  }
+
+  resize(){
+    this.width = this.nWGL.canvas.width;
+    this.height = this.nWGL.canvas.height;
+
+    let gl = this.nWGL.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.texImage2D(gl.TEXTURE_2D,
+      0,
+      this.internalformat,
+      this.width,
+      this.height,
+      0,
+      this.format,
+      this.type,
+      this.image || new this.dataType(this.width * this.height * this.colorChannels)
+    );
   }
 
   /** 
@@ -1432,7 +1452,13 @@ nWGL.framebuffer = class {
     let drawBuffers = [];
     for (let i = 0; i < this.totalBuffers; ++i) {
       if (Array.isArray(opts.internalformat)) {
-        this.textures[i] = new nWGL.texture(this.nWGL, { "internalformat": opts.internalformat[Math.min(i, opts.internalformat.length - 1)] });
+        this.textures[i] = new nWGL.texture(this.nWGL, { 
+          "url": opts.url,
+          "width": opts.width,
+          "height": opts.height,
+          "data": opts.data,
+          "internalformat": opts.internalformat[Math.min(i, opts.internalformat.length - 1)] 
+        });
       } else {
         this.textures[i] = new nWGL.texture(this.nWGL, opts);
       }
@@ -1750,6 +1776,7 @@ nWGL.camera = class {
 nWGL.main = class {
   /**
    * @param {object} [opts] - nWGL's options
+   * @param {number} [opts.fullscreen = false] - fullscreen
    * @param {number} [opts.width = 1024] - canva's width.
    * @param {number} [opts.height = 512] - canva's height.
    * @param {HTMLElement} [opts.el = document.body] - element to append the canvas to.
@@ -1767,8 +1794,9 @@ nWGL.main = class {
 
     /** @member {HTMLElement} */
     this.canvas = document.createElement('canvas');
-    this.canvas.width = opts.width || 1024;
-    this.canvas.height = opts.height || 768;
+    this.fullscreen = opts.fullscreen || false;
+    this.canvas.width =  (this.fullscreen && window.innerWidth) || opts.width || 1024;
+    this.canvas.height = (this.fullscreen && window.innerHeight) || opts.height || 768;
 
     /** @member {HTMLElement} */
     this.el = opts.el || document.body;
@@ -1852,6 +1880,34 @@ nWGL.main = class {
       this.mouse.y = e.clientY || e.pageY;
     }, false);
     
+    window.addEventListener('resize', (e) => {
+      if(this.fullscreen){
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        for(let tex of Object.values(this.textures)){
+          if(tex.fullscreen){
+            tex.resize();
+          }
+        }
+        for(let fb of Object.values(this.framebuffers)){
+          for(let tex of Object.values(fb.textures)){
+            if(tex.fullscreen){
+              tex.resize();
+            }
+          }
+        }
+        for(let program of Object.values(this.programs)){
+          gl.useProgram(program.program);
+          program.setUniform("u_resolution", this.canvas.width, this.canvas.height);
+        }
+        
+        this.frame = 0;
+        // gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        // gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        this.clear();
+      }
+    }, false);
+
     this.swapBuffer = opts.swapBuffer;
     if(this.swapBuffer){
       this.addFrameBuffer({ "internalformat": (swapBuffer || "RGBA32F") }, "readBuffer");
