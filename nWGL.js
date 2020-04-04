@@ -1902,8 +1902,8 @@ nWGL.main = class {
         }
         
         this.frame = 0;
-        // gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-        // gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         this.clear();
       }
     }, false);
