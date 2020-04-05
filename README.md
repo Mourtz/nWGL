@@ -7,11 +7,11 @@ Simple WebGL2 boilerplate. It's supposed to save me some time every time I start
 ([code](https://github.com/Mourtz/nWGL-examples/tree/master/obj-viewer))
 
 #### ! Draft extensions have to be enabled for the following demos !
-[Subsurface Scattering experiment](https://mourtz.github.io/flattened-smallpt/index?scene=subsurface) 
-([code](https://github.com/Mourtz/flattened-smallpt/blob/master/subsurface.glsl))
+[Subsurface Scattering experiment](https://mourtz.github.io/nWGL-playground/index?scene=subsurface) 
+([code](https://github.com/Mourtz/nWGL-playground/tree/master/examples/subsurface))
 
-[flattened-smallpt](https://mourtz.github.io/flattened-smallpt/index) ([code](https://github.com/Mourtz/flattened-smallpt)) \
-[Homogeneous Medium](https://mourtz.github.io/flattened-smallpt/index?scene=volume) ([code](https://github.com/Mourtz/flattened-smallpt/blob/master/medium0.glsl))
+[flattened-smallpt](https://mourtz.github.io/nWGL-playground/index?scene=smallpt) ([code](https://github.com/Mourtz/nWGL-playground/tree/master/examples/smallpt)) \
+[Homogeneous Medium](https://mourtz.github.io/nWGL-playground/index?scene=volume) ([code](https://github.com/Mourtz/nWGL-playground/tree/master/examples/medium0))
 
 [smallpt](https://mourtz.github.io/nWGL-examples/smallpt/smallpt.html) 
 ([code](https://github.com/Mourtz/nWGL-examples/tree/master/smallpt))
