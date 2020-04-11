@@ -916,7 +916,7 @@ nWGL.texture = class {
       this.width = opts.width || nWGL.canvas.width || 1024;
       this.height = opts.height || nWGL.canvas.height || 768;
       // there's no need to store pixel data on the host side
-      this.createTexture(opts.data || new this.dataType(this.width * this.height * this.colorChannels));
+      this.createTexture(opts.data);
     }
   }
 
@@ -934,7 +934,7 @@ nWGL.texture = class {
       0,
       this.format,
       this.type,
-      this.image || new this.dataType(this.width * this.height * this.colorChannels)
+      this.image
     );
   }
 
@@ -1264,18 +1264,25 @@ nWGL.program = class {
    * @param {number} [pos] - texture's position
    * @param {GLenum} [target=gl.TEXTURE_2D] - binding point(target)
    */
-  setTexture(name, tex, pos, target) {
+  bindToTextureUnit(name, tex, pos, target){
     if (!tex || !name) return;
 
     pos = pos || this.textureIndex[name] || 0;
-    this.nWGL.bounded_textures[pos] = tex;
 
     let gl = this.nWGL.gl;
     gl.activeTexture(gl.TEXTURE0 + pos);
     gl.bindTexture(gl[target || "TEXTURE_2D"], tex);
+
+    // update maps
+    this.nWGL.bounded_textures[pos] = tex;
     if (!this.textureIndex[name] || this.textureIndex[name] != pos) {
       this.textureIndex[name] = pos;
     }
+  }
+
+  setTexture(name, tex, pos, target) {
+    this.bindToTextureUnit(name, tex, pos, target);
+    this.setUniform(name, pos);
   }
 
   /**
