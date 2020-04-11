@@ -1703,11 +1703,18 @@ nWGL.camera = class {
       // this.view_matrix = nWGL.helper.lookAt(this.position, this.focusPoint, this.up);
     
     this.fieldOfViewRadians = nWGL.helper.degToRad(60);
-    this.aspect = main.gl.canvas.clientWidth / main.gl.canvas.clientHeight;
+    this.aspect = main.canvas.width / main.canvas.height;
     this.zNear = 0.001;
     this.zFar = 500;
     this.projection_matrix = nWGL.helper.perspective(this.fieldOfViewRadians, this.aspect, this.zNear, this.zFar);
-    this.projection_translation = [0, 0, 0];
+
+    if(main.fullscreen){
+      window.addEventListener('resize', (e) => {
+        console.log("resizing camera");
+        this.aspect = main.canvas.width / main.canvas.height;
+        this.projection_matrix = nWGL.helper.perspective(this.fieldOfViewRadians, this.aspect, this.zNear, this.zFar);
+      }, false);
+    }
   }
 
   UpdateView(){
