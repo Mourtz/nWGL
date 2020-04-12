@@ -1236,7 +1236,7 @@ nWGL.program = class {
     }
 
     // dont show warnings for default uniforms
-    if (!(name == "u_resolution" || name == "u_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
+    if (!(name == "u_resolution" || name == "u_time" || name == "u_delta_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
 
     return false;
   }
@@ -1611,7 +1611,11 @@ nWGL.renderPass = class extends nWGL.pass{
     this.call();
 
     if (this.nWGL.activeProgram.uniforms["u_time"]) {
-      this.nWGL.activeProgram.setUniform("u_time", performance.now() - this.nWGL.loadTime);
+      this.nWGL.activeProgram.setUniform("u_time", this.nWGL.frameTime - this.nWGL.loadTime);
+    }
+
+    if (this.nWGL.activeProgram.uniforms["u_delta_time"]) {
+      this.nWGL.activeProgram.setUniform("u_delta_time", this.nWGL.deltaTime);
     }
 
     if (this.nWGL.activeProgram.uniforms["u_mouse"]) {
@@ -1849,6 +1853,9 @@ nWGL.main = class {
 
     /** @member {number} */
     this.loadTime = performance.now();
+    this.frameTime = 0;
+    this.lastFrameTime = 0;
+    this.deltaTime = 0;
 
     /** @member {object} */
     this.textures = {};
@@ -2114,6 +2121,10 @@ nWGL.main = class {
       program.setUniform("u_time", 0.0);
     }
 
+    if (program.addUniform("u_delta_time", "1f")) {
+      program.setUniform("u_delta_time", 0.0);
+    }
+
     if (program.addUniform("u_mouse", "2f")) {
       program.setUniform("u_mouse", this.mouse.x, this.mouse.y);
     }
@@ -2278,6 +2289,11 @@ nWGL.main = class {
    * @param {number} [instances] - instances of the mesh
    */
   draw(mode, vertices, elements, instances) {
+    this.frameTime = performance.now();
+    if(this.frame == 0) this.lastFrameTime = this.frameTime;
+    this.deltaTime = this.frameTime - this.lastFrameTime;
+    this.lastFrameTime = this.frameTime;
+    
     ++this.frame;
 
     mode = this.gl[mode || "TRIANGLES"];
@@ -2294,7 +2310,11 @@ nWGL.main = class {
       this.composer.render(vertices);    
     } else {
       if (this.activeProgram.uniforms["u_time"]) {
-        this.activeProgram.setUniform("u_time", performance.now() - this.loadTime);
+        this.activeProgram.setUniform("u_time",  this.frameTime - this.loadTime);
+      }
+  
+      if (this.activeProgram.uniforms["u_delta_time"]) {
+        this.activeProgram.setUniform("u_delta_time", this.deltaTime);
       }
   
       if (this.activeProgram.uniforms["u_mouse"]) {
