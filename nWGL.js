@@ -12,6 +12,8 @@ var nWGL = nWGL || {};
 
 // total instances of nWGL.main
 nWGL["__T_CLONES__"] = 0;
+// default shader uniforms
+nWGL["__DEFAULT_UNIFORMS__"] = ["u_resolution", "u_time", "u_delta_time", "u_mouse", "u_frame"];
 
 /**
  * Get text from an external file
@@ -1236,7 +1238,7 @@ nWGL.program = class {
     }
 
     // dont show warnings for default uniforms
-    if (!(name == "u_resolution" || name == "u_time" || name == "u_delta_time" || name == "u_mouse" || name == "u_frame")) console.warn("Couldn't find '" + name + "' uniform!");
+    nWGL["__DEFAULT_UNIFORMS__"].includes(name) || console.warn("Uniform " + name + " not found!");
 
     return false;
   }
@@ -1892,8 +1894,19 @@ nWGL.main = class {
     /** @member {object} - mouse position */
     this.mouse = {
       x: 0,
-      y: 0
+      y: 0,
+      z: 0
     };
+
+    // 'mousedown' event listener
+    document.addEventListener('mousedown', (e) => {
+      this.mouse.z = 1.0;
+    }, false);
+
+    // 'mouseup' event listener
+    document.addEventListener('mouseup', (e) => {
+      this.mouse.z = 0.0;
+    }, false);
 
     // 'mousemove' event listener
     document.addEventListener('mousemove', (e) => {
@@ -2125,8 +2138,8 @@ nWGL.main = class {
       program.setUniform("u_delta_time", 0.0);
     }
 
-    if (program.addUniform("u_mouse", "2f")) {
-      program.setUniform("u_mouse", this.mouse.x, this.mouse.y);
+    if (program.addUniform("u_mouse", "3f")) {
+      program.setUniform("u_mouse", this.mouse.x, this.mouse.y, this.mouse.z);
     }
 
     if (program.addUniform("u_frame", "1ui")) {
@@ -2273,7 +2286,8 @@ nWGL.main = class {
     if (mouse &&
       mouse.x && mouse.x >= rect.left && mouse.x <= rect.right &&
       mouse.y && mouse.y >= rect.top && mouse.y <= rect.bottom) {
-      this.activeProgram.setUniform("u_mouse", mouse.x - rect.left, this.canvas.height - (mouse.y - rect.top))
+      this.activeProgram.setUniform("u_mouse", (mouse.x - rect.left)/this.canvas.width, (this.canvas.height - (mouse.y - rect.top))/this.canvas.height, mouse.z);
+      console.log((mouse.x - rect.left)/this.canvas.width, (this.canvas.height - (mouse.y - rect.top))/this.canvas.height, mouse.z); 
     }
   }
 
