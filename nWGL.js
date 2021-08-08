@@ -13,7 +13,7 @@ var nWGL = nWGL || {};
 // total instances of nWGL.main
 nWGL["__T_CLONES__"] = 0;
 // default shader uniforms
-nWGL["__DEFAULT_UNIFORMS__"] = ["u_resolution", "u_time", "u_delta_time", "u_mouse", "u_frame"];
+nWGL["__DEFAULT_UNIFORMS__"] = ["u_resolution", "u_time", "u_delta_time", "u_mouse", "u_frame", "u_keyboard"];
 
 /**
  * Get text from an external file
@@ -811,6 +811,11 @@ nWGL.texture = class {
     this.dataType = Uint8Array;
 
     switch (this.internalformat) {
+      case gl.R8:
+        this.format = gl.RED;
+        this.type = gl.UNSIGNED_BYTE;
+        this.colorChannels = 1;
+        break;
       // RGB uint8_t
       case gl.RGB:
       case gl.RGB8:
@@ -918,7 +923,8 @@ nWGL.texture = class {
       this.width = opts.width || nWGL.canvas.width || 1024;
       this.height = opts.height || nWGL.canvas.height || 768;
       // there's no need to store pixel data on the host side
-      this.createTexture(opts.data);
+      if(opts.fill === undefined) opts.fill = true;
+      this.createTexture(opts.data, opts.fill);
     }
   }
 
@@ -944,16 +950,39 @@ nWGL.texture = class {
    * Creates a GL texture.
    * @param {HTMLImageElement | HTMLVideoElement} [data=this.image] - data to put inside the GL texture
    */
-  createTexture(data) {
+  createTexture(data, fill = true) {
     let gl = this.nWGL.gl;
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.TEXTURE_WRAP_S);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.TEXTURE_WRAP_T);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.TEXTURE_MIN_FILTER);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.TEXTURE_MAG_FILTER);
+    if(fill){
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.TEXTURE_WRAP_S);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.TEXTURE_WRAP_T);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.TEXTURE_MIN_FILTER);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.TEXTURE_MAG_FILTER);
+
+      gl.texImage2D(gl.TEXTURE_2D,
+        0,
+        this.internalformat,
+        this.width,
+        this.height,
+        0,
+        this.format,
+        this.type,
+        data || this.image
+      );
+    } else {
+      gl.texStorage2D(gl.TEXTURE_2D, 1, this.internalformat, this.width, this.height);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  // texture's pixel data setter
+  setData(opts) {
+    let gl = this.nWGL.gl;
+
+    if (opts.bind) gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
     gl.texImage2D(gl.TEXTURE_2D,
       0,
@@ -963,10 +992,25 @@ nWGL.texture = class {
       0,
       this.format,
       this.type,
-      data || this.image
+      opts.data || this.image
     );
+  }
 
-    gl.bindTexture(gl.TEXTURE_2D, null);
+  updateData(opts) {
+    let gl = this.nWGL.gl;
+
+    if (opts.bind) gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    
+    gl.texSubImage2D(gl.TEXTURE_2D,
+      0,
+      opts.xoffset || 0,
+      opts.yoffset || 0,
+      1,
+      1,
+      this.format,
+      this.type,
+      opts.data
+    );
   }
 
   /** 
@@ -1024,24 +1068,6 @@ nWGL.texture = class {
   // texture getter
   get tex() {
     return this.texture;
-  }
-
-  // texture's pixel data setter
-  set tex_data(opts) {
-    let gl = this.nWGL.gl;
-
-    if (opts.bind) gl.bindTexture(gl.TEXTURE_2D, this.texture);
-
-    gl.texImage2D(gl.TEXTURE_2D,
-      0,
-      this.internalformat,
-      this.width,
-      this.height,
-      0,
-      this.format,
-      this.type,
-      opts.data || this.image
-    );
   }
 
   // image getter
@@ -1628,6 +1654,10 @@ nWGL.renderPass = class extends nWGL.pass{
       this.nWGL.activeProgram.setUniform("u_frame", this.nWGL.frame);
     }
 
+    if (this.nWGL.activeProgram.uniforms["u_keyboard"]) {
+      this.nWGL.setTexture("u_keyboard", this.nWGL.keymapTex.tex, 31);
+    }
+
     this.nWGL.gl.drawArrays(this.nWGL.gl[this.mode || "TRIANGLES"], 0, vert_count || 6);
   }
 }
@@ -1863,7 +1893,7 @@ nWGL.main = class {
     this.textures = {};
     /** @member {object} */
     this.bounded_textures = {};
-    for (let i = 0; i < 16; ++i) this.bounded_textures[i] = null;
+    for (let i = 0; i < 32; ++i) this.bounded_textures[i] = null;
     if (Object.seal) Object.seal(this.bounded_textures);
 
     /** @member {object} */
@@ -1897,6 +1927,18 @@ nWGL.main = class {
       y: 0,
       z: 0
     };
+
+    /** @member {array} - keycodes */
+    this.keymapTex = this.addTexture({"internalformat": "R8", "width": 256, "height": 1, "fill": false}, "u_keyboard");
+    var keymapTex = this.keymapTex;
+
+    document.addEventListener('keydown', function(e) {
+      keymapTex.updateData({"bind": true, "xoffset": e.keyCode, "yoffset": 0, "data": new Uint8Array([1])});
+    }, false);
+
+    document.addEventListener('keyup', function(e) {
+      keymapTex.updateData({"bind": true, "xoffset": e.keyCode, "yoffset": 0, "data": new Uint8Array([0])});
+    }, false);
 
     // 'mousedown' event listener
     document.addEventListener('mousedown', (e) => {
@@ -2146,6 +2188,10 @@ nWGL.main = class {
       program.setUniform("u_frame", 0);
     }
 
+    if (program.addUniform("u_keyboard", "1i")) {
+      program.setUniform("u_keyboard", 31);
+    }
+
     return program;
   }
 
@@ -2287,7 +2333,6 @@ nWGL.main = class {
       mouse.x && mouse.x >= rect.left && mouse.x <= rect.right &&
       mouse.y && mouse.y >= rect.top && mouse.y <= rect.bottom) {
       this.activeProgram.setUniform("u_mouse", (mouse.x - rect.left)/this.canvas.width, (this.canvas.height - (mouse.y - rect.top))/this.canvas.height, mouse.z);
-      console.log((mouse.x - rect.left)/this.canvas.width, (this.canvas.height - (mouse.y - rect.top))/this.canvas.height, mouse.z); 
     }
   }
 
